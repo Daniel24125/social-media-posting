@@ -6,7 +6,7 @@ export default async function DashboardRootPage() {
   const session = await auth0.getSession();
 
   if (!session || !session.user) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -14,7 +14,7 @@ export default async function DashboardRootPage() {
   });
 
   if (!dbUser) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   const mostRecentMembership = await prisma.projectMember.findFirst({

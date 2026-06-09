@@ -1,0 +1,2118 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+app/actions/compose.ts
+app/actions/post.ts
+app/actions/settings.ts
+app/api/upload/token/route.ts
+app/dashboard/[projectId]/compose/ComposeClient.tsx
+app/dashboard/[projectId]/compose/page.tsx
+app/dashboard/[projectId]/DashboardClient.tsx
+app/dashboard/[projectId]/layout.tsx
+app/dashboard/[projectId]/page.tsx
+app/dashboard/[projectId]/settings/page.tsx
+app/dashboard/[projectId]/settings/SettingsClient.tsx
+app/dashboard/layout.tsx
+app/dashboard/page.tsx
+app/favicon.ico
+app/globals.css
+app/layout.tsx
+app/onboarding/actions.ts
+app/onboarding/page.tsx
+app/page.tsx
+components.json
+components/ui/button.tsx
+components/ui/card.tsx
+eslint.config.mjs
+lib/auth0.ts
+lib/prisma.ts
+lib/utils.ts
+next.config.ts
+package.json
+postcss.config.mjs
+prisma.config.ts
+prisma/schema.prisma
+proxy.ts
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
+README.md
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="components/ui/card.tsx">
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+function Card({
+  className,
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+  return (
+    <div
+      data-slot="card"
+      data-size={size}
+      className={cn(
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg bg-card py-(--card-spacing) text-xs/relaxed text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn(
+        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-lg px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-title"
+      className={cn("font-heading text-sm font-medium", className)}
+      {...props}
+    />
+  )
+}
+
+function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-description"
+      className={cn("text-xs/relaxed text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn("px-(--card-spacing)", className)}
+      {...props}
+    />
+  )
+}
+
+function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn(
+        "flex items-center rounded-b-lg px-(--card-spacing) [.border-t]:pt-(--card-spacing)",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+}
+</file>
+
+<file path="app/actions/compose.ts">
+'use server';
+
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
+
+export async function createScheduledPost(projectId: string, formData: FormData) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const content = formData.get('content') as string;
+  const platforms = formData.getAll('platforms') as string[];
+  const scheduledDateStr = formData.get('scheduledDate') as string;
+  const imageUrl = formData.get('imageUrl') as string | null;
+  const imageBlobPath = formData.get('imageBlobPath') as string | null;
+
+  if (!content || platforms.length === 0 || !scheduledDateStr) {
+    throw new Error('Missing required fields');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    throw new Error('User not found');
+  }
+
+  // Security: Check if user has access to this project
+  const membership = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: dbUser.id,
+        projectId,
+      },
+    },
+  });
+
+  if (!membership) {
+    throw new Error('Unauthorized');
+  }
+
+  await prisma.post.create({
+    data: {
+      projectId,
+      content,
+      platforms,
+      scheduledDate: new Date(scheduledDateStr),
+      status: 'PENDING',
+      postedBy: dbUser.id,
+      imageUrl: imageUrl || null,
+      imageBlobPath: imageBlobPath || null,
+    },
+  });
+
+  redirect(`/dashboard/${projectId}`);
+}
+</file>
+
+<file path="app/actions/post.ts">
+'use server';
+
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+
+export async function createManualPost(projectId: string, formData: FormData) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const content = formData.get('content') as string;
+  const platforms = formData.getAll('platforms') as string[];
+  const scheduledDateStr = formData.get('scheduledDate') as string;
+
+  if (!content || platforms.length === 0 || !scheduledDateStr) {
+    throw new Error('Missing required fields');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    throw new Error('User not found');
+  }
+
+  // Security: Check if user has access to this project
+  const membership = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: dbUser.id,
+        projectId,
+      },
+    },
+  });
+
+  if (!membership) {
+    throw new Error('Unauthorized');
+  }
+
+  await prisma.post.create({
+    data: {
+      projectId,
+      content,
+      platforms,
+      scheduledDate: new Date(scheduledDateStr),
+      status: 'MANUAL',
+      postedBy: dbUser.id,
+    },
+  });
+
+  revalidatePath(`/dashboard/${projectId}`);
+}
+</file>
+
+<file path="app/actions/settings.ts">
+'use server';
+
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+
+export async function addTeamMember(projectId: string, formData: FormData) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const email = formData.get('email') as string;
+
+  if (!email || email.trim() === '') {
+    throw new Error('Email is required');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    throw new Error('User not found');
+  }
+
+  // Security: Check if current user is an OWNER of this project
+  const membership = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: dbUser.id,
+        projectId,
+      },
+    },
+  });
+
+  if (!membership || membership.role !== 'OWNER') {
+    throw new Error('Unauthorized. Only project owners can add members.');
+  }
+
+  // Check if user to add exists in our system
+  const userToAdd = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!userToAdd) {
+    throw new Error('User with this email does not exist in our system. They must log in at least once first.');
+  }
+
+  // Add the user to the project
+  try {
+    await prisma.projectMember.create({
+      data: {
+        userId: userToAdd.id,
+        projectId,
+        role: 'MEMBER',
+      },
+    });
+  } catch (error: any) {
+    // Unique constraint violation if already added
+    if (error.code === 'P2002') {
+      throw new Error('User is already a member of this project.');
+    }
+    throw error;
+  }
+
+  revalidatePath(`/dashboard/${projectId}/settings`);
+}
+</file>
+
+<file path="app/api/upload/token/route.ts">
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { NextResponse } from 'next/server';
+import { auth0 } from '@/lib/auth0';
+
+export async function POST(request: Request): Promise<NextResponse> {
+  const body = (await request.json()) as HandleUploadBody;
+
+  try {
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
+        const session = await auth0.getSession();
+        if (!session || !session.user) {
+          throw new Error('Unauthenticated upload attempt blocked');
+        }
+        
+        return {
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          tokenPayload: JSON.stringify({
+            userId: session.user.sub,
+          }),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        // Complete internal backend verification logs here if necessary
+      },
+    });
+
+    return NextResponse.json(jsonResponse);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Blob initialization failed' },
+      { status: 400 }
+    );
+  }
+}
+</file>
+
+<file path="app/dashboard/[projectId]/compose/ComposeClient.tsx">
+'use client';
+
+import { useState, useRef } from 'react';
+import { upload } from '@vercel/blob/client';
+import { createScheduledPost } from '@/app/actions/compose';
+
+export default function ComposeClient({ projectId }: { projectId: string }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobPath, setBlobPath] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setError(null);
+    try {
+      const newBlob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload/token',
+      });
+      setBlobUrl(newBlob.url);
+      setBlobPath(newBlob.pathname);
+    } catch (err: any) {
+      console.error(err);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    if (blobUrl) formData.append('imageUrl', blobUrl);
+    if (blobPath) formData.append('imageBlobPath', blobPath);
+
+    try {
+      await createScheduledPost(projectId, formData);
+      // Redirect happens in the server action
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to schedule post');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+      <div className="p-6 sm:p-8 border-b border-gray-100 dark:border-zinc-800">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Compose Post</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Create and schedule a new publication across multiple platforms.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-100 dark:bg-red-900/30 dark:border-red-900 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Caption / Content
+          </label>
+          <textarea
+            id="content"
+            name="content"
+            required
+            rows={5}
+            placeholder="What's on your mind?"
+            className="w-full rounded-lg border-gray-300 dark:border-zinc-700 shadow-sm py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-white transition-colors"
+          ></textarea>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Media Attachment
+          </label>
+          <div 
+            className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Uploading media...</p>
+              </div>
+            ) : blobUrl ? (
+              <div className="flex flex-col items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={blobUrl} alt="Preview" className="max-h-48 rounded-lg mb-4" />
+                <p className="text-sm text-green-600 font-medium">Upload complete! Click to replace.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center">
+                <div className="h-12 w-12 text-gray-400 mb-4">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Click to upload an image, or drag and drop</p>
+                <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP up to 5MB</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Target Platforms
+            </label>
+            <div className="space-y-3">
+              {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => (
+                <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    name="platforms"
+                    value={platform}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-200">
+                    {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Deployment Date
+            </label>
+            <input
+              type="date"
+              id="scheduledDate"
+              name="scheduledDate"
+              required
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full rounded-lg border-gray-300 dark:border-zinc-700 shadow-sm py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-white transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
+          <button
+            type="submit"
+            disabled={isSubmitting || isUploading}
+            className="inline-flex justify-center items-center py-3 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Scheduling...
+              </>
+            ) : (
+              'Schedule Post'
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/compose/page.tsx">
+import ComposeClient from './ComposeClient';
+
+export default async function ComposePage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = await params;
+
+  return (
+    <div>
+      <ComposeClient projectId={projectId} />
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/DashboardClient.tsx">
+'use client';
+
+import { useState } from 'react';
+import { createManualPost } from '@/app/actions/post';
+import { format } from 'date-fns';
+
+type Post = {
+  id: string;
+  content: string;
+  platforms: string[];
+  scheduledDate: Date;
+  status: string;
+  errorMessage: string | null;
+  createdAt: Date;
+};
+
+export default function DashboardClient({
+  projectId,
+  initialPosts,
+}: {
+  projectId: string;
+  initialPosts: Post[];
+}) {
+  const [posts, setPosts] = useState(initialPosts);
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterPlatform, setFilterPlatform] = useState<string>('ALL');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Stats
+  const totalScheduled = posts.filter((p) => p.status === 'PENDING').length;
+  const totalPublished = posts.filter((p) => p.status === 'PUBLISHED').length;
+  const totalFailed = posts.filter((p) => p.status === 'FAILED').length;
+  const totalManual = posts.filter((p) => p.status === 'MANUAL').length;
+
+  // Filter
+  const filteredPosts = posts.filter((p) => {
+    const matchStatus = filterStatus === 'ALL' || p.status === filterStatus;
+    const matchPlatform =
+      filterPlatform === 'ALL' || p.platforms.includes(filterPlatform);
+    return matchStatus && matchPlatform;
+  });
+
+  const handleManualEntry = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    try {
+      await createManualPost(projectId, formData);
+      setIsModalOpen(false);
+      // Let standard Next.js revalidation refresh the data.
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to log manual entry');
+    }
+  };
+
+  const getStatusBadge = (status: string, error?: string | null) => {
+    switch (status) {
+      case 'PUBLISHED':
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Published</span>;
+      case 'PENDING':
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Pending</span>;
+      case 'PROCESSING':
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Processing</span>;
+      case 'FAILED':
+        return (
+          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 cursor-help" title={error || 'Failed'}>
+            Failed
+          </span>
+        );
+      case 'MANUAL':
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">Manual</span>;
+      default:
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Scheduled', value: totalScheduled, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Total Published', value: totalPublished, color: 'text-green-600 dark:text-green-400' },
+          { label: 'Total Failed', value: totalFailed, color: 'text-red-600 dark:text-red-400' },
+          { label: 'Total Manual', value: totalManual, color: 'text-slate-600 dark:text-slate-400' },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</h3>
+            <p className={`mt-2 text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-sm border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="FAILED">Failed</option>
+              <option value="MANUAL">Manual</option>
+            </select>
+            <select
+              value={filterPlatform}
+              onChange={(e) => setFilterPlatform(e.target.value)}
+              className="text-sm border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="ALL">All Platforms</option>
+              <option value="LINKEDIN">LinkedIn</option>
+              <option value="X">X (Twitter)</option>
+              <option value="INSTAGRAM">Instagram</option>
+            </select>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            + Log Manual Update
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
+            <thead className="bg-gray-50 dark:bg-zinc-950/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Content</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platforms</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
+              {filteredPosts.map((post) => (
+                <tr key={post.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white line-clamp-2 max-w-md">{post.content}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex gap-1">
+                      {post.platforms.map((p) => (
+                        <span key={p} className="text-xs bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {format(new Date(post.scheduledDate), 'MMM d, yyyy')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(post.status, post.errorMessage)}
+                  </td>
+                </tr>
+              ))}
+              {filteredPosts.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    No posts found matching your filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Manual Entry Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-zinc-950/80 transition-opacity" onClick={() => setIsModalOpen(false)}></div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white dark:bg-zinc-900 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100 dark:border-zinc-800">
+              <form onSubmit={handleManualEntry}>
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                    Log Personal/Manual Update
+                  </h3>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Content</label>
+                      <textarea
+                        id="content"
+                        name="content"
+                        required
+                        rows={3}
+                        className="mt-1 block w-full border border-gray-300 dark:border-zinc-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                        placeholder="What did you post?"
+                      ></textarea>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Platforms</label>
+                      <div className="flex gap-4">
+                        {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => (
+                          <label key={platform} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              name="platforms"
+                              value={platform}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-700 dark:bg-zinc-800"
+                            />
+                            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                      <input
+                        type="date"
+                        id="scheduledDate"
+                        name="scheduledDate"
+                        required
+                        defaultValue={new Date().toISOString().split('T')[0]}
+                        className="mt-1 block w-full border border-gray-300 dark:border-zinc-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-zinc-950/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-zinc-800">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Save Manual Entry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-zinc-700 shadow-sm px-4 py-2 bg-white dark:bg-zinc-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/layout.tsx">
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { LayoutDashboard, PenSquare, Settings, Users } from 'lucide-react';
+
+export default async function ProjectDashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = await params;
+  const session = await auth0.getSession();
+
+  if (!session || !session.user) {
+    redirect('/api/auth/login');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    redirect('/api/auth/login');
+  }
+
+  const membership = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: dbUser.id,
+        projectId: projectId,
+      },
+    },
+    include: { project: true },
+  });
+
+  if (!membership) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-red-600">403 Forbidden</h1>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            You do not have access to this workspace.
+          </p>
+          <Link href="/dashboard" className="mt-6 inline-block text-blue-600 hover:underline">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const userProjects = await prisma.projectMember.findMany({
+    where: { userId: dbUser.id },
+    include: { project: true },
+  });
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-zinc-800">
+          <select 
+            className="w-full bg-transparent border-none text-sm font-semibold focus:ring-0 dark:text-white"
+            defaultValue={projectId}
+            // Ideally, this would use a Client Component for the onChange handler to navigate,
+            // but for simplicity in a server layout, we render a static visual or we can
+            // add a small client component wrapper later if needed.
+          >
+            {userProjects.map((m) => (
+              <option key={m.projectId} value={m.projectId}>
+                {m.project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <nav className="flex-1 overflow-y-auto py-4">
+          <ul className="space-y-1 px-3">
+            <li>
+              <Link
+                href={`/dashboard/${projectId}`}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Overview
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={`/dashboard/${projectId}/compose`}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+              >
+                <PenSquare className="h-4 w-4" />
+                Compose Post
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={`/dashboard/${projectId}/settings`}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+              >
+                <Settings className="h-4 w-4" />
+                Workspace Settings
+              </Link>
+            </li>
+          </ul>
+        </nav>
+        <div className="p-4 border-t border-gray-200 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              {dbUser.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {dbUser.name}
+              </p>
+              <a href="/api/auth/logout" className="text-xs text-red-600 hover:underline">
+                Sign out
+              </a>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {membership.project.name}
+          </h2>
+        </header>
+        <div className="flex-1 overflow-y-auto p-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/page.tsx">
+import { prisma } from '@/lib/prisma';
+import DashboardClient from './DashboardClient';
+import { redirect } from 'next/navigation';
+import { auth0 } from '@/lib/auth0';
+
+export default async function ProjectDashboardPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = await params;
+  const session = await auth0.getSession();
+
+  if (!session || !session.user) {
+    redirect('/api/auth/login');
+  }
+
+  // Fetch the posts for this project
+  const posts = await prisma.post.findMany({
+    where: { projectId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Overview</h1>
+        <p className="text-gray-600 dark:text-gray-400">Track and manage your social media publications.</p>
+      </div>
+      
+      <DashboardClient 
+        projectId={projectId} 
+        initialPosts={posts} 
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/settings/page.tsx">
+import { prisma } from '@/lib/prisma';
+import SettingsClient from './SettingsClient';
+import { redirect } from 'next/navigation';
+import { auth0 } from '@/lib/auth0';
+
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = await params;
+  const session = await auth0.getSession();
+
+  if (!session || !session.user) {
+    redirect('/api/auth/login');
+  }
+
+  // Fetch the members for this project
+  const members = await prisma.projectMember.findMany({
+    where: { projectId },
+    include: { user: true },
+    orderBy: { role: 'desc' }, // OWNER first
+  });
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workspace Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage team members and workspace access.</p>
+      </div>
+      
+      <SettingsClient 
+        projectId={projectId} 
+        members={members} 
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/[projectId]/settings/SettingsClient.tsx">
+'use client';
+
+import { useState } from 'react';
+import { addTeamMember } from '@/app/actions/settings';
+
+export default function SettingsClient({
+  projectId,
+  members,
+}: {
+  projectId: string;
+  members: any[];
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleAddMember = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    const formData = new FormData(e.currentTarget);
+    try {
+      await addTeamMember(projectId, formData);
+      setSuccess('Team member added successfully!');
+      (e.target as HTMLFormElement).reset();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to add team member');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 dark:border-zinc-800">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Invite Team Member</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Invite colleagues to collaborate in this workspace. They must have an existing account.
+          </p>
+        </div>
+        
+        <form onSubmit={handleAddMember} className="p-6">
+          {error && (
+            <div className="mb-4 bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-100 dark:bg-red-900/30 dark:border-red-900 dark:text-red-400">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 bg-green-50 text-green-600 p-4 rounded-lg text-sm border border-green-100 dark:bg-green-900/30 dark:border-green-900 dark:text-green-400">
+              {success}
+            </div>
+          )}
+
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="colleague@example.com"
+                className="w-full rounded-lg border-gray-300 dark:border-zinc-700 shadow-sm py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? 'Inviting...' : 'Invite'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 dark:border-zinc-800">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Workspace Members</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            People who have access to this workspace.
+          </p>
+        </div>
+        
+        <ul className="divide-y divide-gray-200 dark:divide-zinc-800">
+          {members.map((member) => (
+            <li key={member.id} className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
+                  {member.user.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{member.user.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{member.user.email}</p>
+                </div>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                member.role === 'OWNER' 
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' 
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+              }`}>
+                {member.role}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/layout.tsx">
+import { redirect } from 'next/navigation';
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth0.getSession();
+
+  if (!session || !session.user) {
+    redirect('/api/auth/login');
+  }
+
+  const { email, name, sub } = session.user;
+
+  // User Synchronization Sync
+  let dbUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        email,
+        name: name || email,
+      },
+    });
+  }
+
+  // Tenant Verification: check if this user has any records inside ProjectMember
+  const memberships = await prisma.projectMember.findMany({
+    where: { userId: dbUser.id },
+  });
+
+  if (memberships.length === 0) {
+    // If they do not belong to any workspace, redirect to /onboarding
+    redirect('/onboarding');
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-slate-900 dark:text-slate-50">
+      {children}
+    </div>
+  );
+}
+</file>
+
+<file path="app/dashboard/page.tsx">
+import { redirect } from 'next/navigation';
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+
+export default async function DashboardRootPage() {
+  const session = await auth0.getSession();
+
+  if (!session || !session.user) {
+    redirect('/api/auth/login');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    redirect('/api/auth/login');
+  }
+
+  const mostRecentMembership = await prisma.projectMember.findFirst({
+    where: { userId: dbUser.id },
+    include: { project: true },
+    orderBy: { project: { createdAt: 'desc' } },
+  });
+
+  if (mostRecentMembership) {
+    redirect(`/dashboard/${mostRecentMembership.projectId}`);
+  }
+
+  redirect('/onboarding');
+}
+</file>
+
+<file path="app/globals.css">
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.488 0.243 264.376);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.546 0.245 262.881);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.424 0.199 265.638);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.623 0.214 259.815);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+</file>
+
+<file path="app/onboarding/actions.ts">
+'use server';
+
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
+
+export async function createFirstWorkspace(formData: FormData) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const projectName = formData.get('name') as string;
+  if (!projectName || projectName.trim() === '') {
+    throw new Error('Workspace name is required');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    throw new Error('User not found in database');
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      name: projectName,
+      members: {
+        create: {
+          userId: dbUser.id,
+          role: 'OWNER',
+        },
+      },
+    },
+  });
+
+  redirect(`/dashboard/${project.id}`);
+}
+</file>
+
+<file path="app/onboarding/page.tsx">
+import { createFirstWorkspace } from './actions';
+
+export default function OnboardingPage() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950">
+      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-gray-100 dark:border-zinc-800 p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome!</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Let's get started by creating your first project workspace.
+          </p>
+        </div>
+        
+        <form action={createFirstWorkspace} className="space-y-6">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Workspace Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              placeholder="e.g. SUNRISE"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Create Workspace
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="app/page.tsx">
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Share2, Database, Users } from "lucide-react";
+import Link from "next/link";
+import { auth0 } from '@/lib/auth0';
+
+export default async function Home() {
+  const session = await auth0.getSession();
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* Navigation Bar */}
+      <header className="px-6 lg:px-8 h-16 flex items-center justify-between border-b">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-xl tracking-tight">Social Media Scheduler</span>
+        </div>
+        <nav>
+          {session ? (
+            <Button asChild>
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/auth/login">Log In / Get Started</Link>
+            </Button>
+          )}
+        </nav>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="w-full py-24 md:py-32 lg:py-40 flex flex-col items-center justify-center text-center px-4 md:px-6">
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+              Streamline Project Communications Across Every Platform
+            </h1>
+            <p className="mx-auto max-w-[700px] text-lg text-muted-foreground md:text-xl">
+              The central hub to schedule, sync, and track research publications across LinkedIn, X, and Instagram.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 mt-8">
+            {session ? (
+              <Button asChild size="lg">
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link href="/auth/login">Log In / Get Started</Link>
+              </Button>
+            )}
+            <Button variant="outline" size="lg" asChild>
+              <Link href="#features">Learn More</Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* Features Grid */}
+        <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50 dark:bg-slate-900/50">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="grid gap-6 lg:grid-cols-3 lg:gap-12">
+              {/* Feature 1 */}
+              <Card>
+                <CardHeader>
+                  <Share2 className="w-10 h-10 mb-4 text-primary" />
+                  <CardTitle>Multi-Platform Sync</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Write once, publish everywhere. Connect LinkedIn, X, and Instagram through automated webhooks.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Feature 2 */}
+              <Card>
+                <CardHeader>
+                  <Database className="w-10 h-10 mb-4 text-primary" />
+                  <CardTitle>Permanent Track Record</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Never lose a post. Every scheduled publication and manual entry is archived in a centralized database.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Feature 3 */}
+              <Card>
+                <CardHeader>
+                  <Users className="w-10 h-10 mb-4 text-primary" />
+                  <CardTitle>Team Collaboration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Invite researchers to your workspace. Share access without sharing social media passwords.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+      </main>
+
+    </div>
+  );
+}
+</file>
+
+<file path="components.json">
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-mira",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {}
+}
+</file>
+
+<file path="components/ui/button.tsx">
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from "radix-ui"
+
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-xs/relaxed font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        outline:
+          "border-border hover:bg-input/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+        ghost:
+          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        destructive:
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default:
+          "h-7 gap-1 px-2 text-xs/relaxed has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        xs: "h-5 gap-1 rounded-sm px-2 text-[0.625rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-2.5",
+        sm: "h-6 gap-1 px-2 text-xs/relaxed has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        lg: "h-8 gap-1 px-2.5 text-xs/relaxed has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-4",
+        icon: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
+        "icon-xs": "size-5 rounded-sm [&_svg:not([class*='size-'])]:size-2.5",
+        "icon-sm": "size-6 [&_svg:not([class*='size-'])]:size-3",
+        "icon-lg": "size-8 [&_svg:not([class*='size-'])]:size-4",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+function Button({
+  className,
+  variant = "default",
+  size = "default",
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot.Root : "button"
+
+  return (
+    <Comp
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, buttonVariants }
+</file>
+
+<file path="eslint.config.mjs">
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
+  },
+];
+
+export default eslintConfig;
+</file>
+
+<file path="lib/auth0.ts">
+import { Auth0Client } from "@auth0/nextjs-auth0/server";
+
+export const auth0 = new Auth0Client();
+</file>
+
+<file path="lib/prisma.ts">
+import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+const connectionString = `${process.env.DATABASE_URL}`;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+</file>
+
+<file path="lib/utils.ts">
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="postcss.config.mjs">
+const config = {
+  plugins: ["@tailwindcss/postcss"],
+};
+
+export default config;
+</file>
+
+<file path="prisma.config.ts">
+// This file was generated by Prisma, and assumes you have installed the following:
+// npm install --save-dev prisma dotenv
+import "dotenv/config";
+import { defineConfig } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: {
+    path: "prisma/migrations",
+  },
+  datasource: {
+    url: process.env["DATABASE_URL"],
+  },
+});
+</file>
+
+<file path="prisma/schema.prisma">
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  name          String?
+  memberships   ProjectMember[]
+  createdAt     DateTime        @default(now())
+}
+
+model Project {
+  id            String          @id @default(uuid())
+  name          String
+  createdAt     DateTime        @default(now())
+  members       ProjectMember[]
+  posts         Post[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  role      String   @default("MEMBER")
+  userId    String
+  projectId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model Post {
+  id             String    @id @default(uuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  content        String    @db.Text
+  imageUrl       String?   @db.Text
+  imageBlobPath  String?   @db.Text
+  platforms      String[]
+  scheduledDate  DateTime  @db.Date
+  status         String    @default("PENDING")
+  errorMessage   String?   @db.Text
+  postedBy       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+</file>
+
+<file path="proxy.ts">
+import { NextRequest } from "next/server";
+import { auth0 } from "./lib/auth0";
+
+export async function proxy(request: NextRequest) {
+    const authResponse = await auth0.middleware(request);
+    return authResponse;
+}
+
+export const config = {
+    matcher: [
+        "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    ],
+};
+</file>
+
+<file path="public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path="README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/lib/generated/prisma
+</file>
+
+<file path="app/layout.tsx">
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
+import "./globals.css";
+import { cn } from "@/lib/utils";
+import { Auth0Provider } from '@auth0/nextjs-auth0/client';
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={cn("font-sans", inter.variable)}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <Auth0Provider>
+          {children}
+        </Auth0Provider>
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "social-media-posting",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@auth0/nextjs-auth0": "^4.22.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@types/pg": "^8.20.0",
+    "@vercel/blob": "^2.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.17.0",
+    "next": "15.5.19",
+    "pg": "^8.21.0",
+    "radix-ui": "^1.5.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "shadcn": "^4.11.0",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.19",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+</files>
