@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FormContainer } from "@/components/shared/FormContainer";
+import { toast } from "sonner";
+import { Linkedin, Twitter, Instagram, Loader2 } from 'lucide-react';
 
 export default function ComposeClient({ projectId }: { projectId: string }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -31,8 +33,10 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
       });
       setBlobUrl(newBlob.url);
       setBlobPath(newBlob.pathname);
+      toast.success("Image uploaded successfully");
     } catch (err: any) {
       console.error(err);
+      toast.error('Failed to upload image. Please try again.');
       setError('Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
@@ -51,9 +55,11 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
 
     try {
       await createScheduledPost(projectId, formData);
+      toast.success(isInstant ? "Post published instantly!" : "Post scheduled successfully!");
       // Redirect happens in the server action
     } catch (err: any) {
       console.error(err);
+      toast.error(err.message || 'Failed to schedule post');
       setError(err.message || 'Failed to schedule post');
       setIsSubmitting(false);
     }
@@ -136,19 +142,24 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
             <div className="space-y-3">
               <Label>Target Platforms</Label>
               <div className="space-y-3">
-                {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => (
-                  <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <input
-                      type="checkbox"
-                      name="platforms"
-                      value={platform}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
-                    />
-                    <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-200">
-                      {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
-                    </span>
-                  </label>
-                ))}
+                {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => {
+                  const Icon = platform === 'LINKEDIN' ? Linkedin : platform === 'X' ? Twitter : Instagram;
+                  const colorClass = platform === 'LINKEDIN' ? 'text-blue-600' : platform === 'X' ? 'text-neutral-900 dark:text-white' : 'text-pink-600';
+                  return (
+                    <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                      <input
+                        type="checkbox"
+                        name="platforms"
+                        value={platform}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
+                      />
+                      <Icon className={`w-5 h-5 ml-3 ${colorClass}`} />
+                      <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-200">
+                        {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
@@ -202,7 +213,7 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="animate-spin w-4 h-4 mr-2" />
                   {isInstant ? 'Posting...' : 'Scheduling...'}
                 </>
               ) : (

@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createManualPost, deleteScheduledPost } from '@/app/actions/post';
-import { Trash2, Download } from 'lucide-react';
+import { Trash2, Download, Loader2 } from 'lucide-react';
+import { toast } from "sonner";
 import { format } from 'date-fns';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
@@ -40,20 +41,49 @@ export default function DashboardClient({
   const [filterPlatform, setFilterPlatform] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errorDialogMessage, setErrorDialogMessage] = useState<string | null>(null);
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const handleDelete = async (postId: string) => {
+    setDeletingPostId(postId);
     startTransition(async () => {
       try {
         await deleteScheduledPost(postId, projectId);
         setPosts((currentPosts) => currentPosts.filter((p) => p.id !== postId));
+        toast.success("Post deleted successfully");
         router.refresh();
       } catch (err) {
         console.error(err);
-        setErrorDialogMessage('Failed to delete post');
+        toast.error('Failed to delete post');
+      } finally {
+        setDeletingPostId(null);
       }
     });
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export`);
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SUNRISE_Outreach_Tracking_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Export successful");
+    } catch (error) {
+      toast.error("Failed to export data");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Stats
@@ -72,14 +102,18 @@ export default function DashboardClient({
 
   const handleManualEntry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmittingManual(true);
     const formData = new FormData(e.currentTarget);
     try {
       await createManualPost(projectId, formData);
       setIsModalOpen(false);
+      toast.success("Manual entry logged successfully!");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      setErrorDialogMessage('Failed to log manual entry');
+      toast.error('Failed to log manual entry');
+    } finally {
+      setIsSubmittingManual(false);
     }
   };
 
@@ -124,8 +158,8 @@ export default function DashboardClient({
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.location.href = `/api/projects/${projectId}/export`}>
-              <Download className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               Export to Excel
             </Button>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -205,7 +239,8 @@ export default function DashboardClient({
                       Cancel
                     </Button>
                   </DialogClose>
-                  <Button type="submit">
+                  <Button type="submit" disabled={isSubmittingManual}>
+                    {isSubmittingManual && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Save Manual Entry
                   </Button>
                 </DialogFooter>
@@ -249,11 +284,11 @@ export default function DashboardClient({
                     <Dialog>
                       <DialogTrigger asChild>
                         <button
-                          disabled={isPending}
+                          disabled={deletingPostId === post.id || isPending && deletingPostId !== null}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
                           title="Delete Post"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          {deletingPostId === post.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                         </button>
                       </DialogTrigger>
                       <DialogContent>
