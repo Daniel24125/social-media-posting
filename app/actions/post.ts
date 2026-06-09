@@ -11,11 +11,13 @@ export async function createManualPost(projectId: string, formData: FormData) {
     throw new Error('Not authenticated');
   }
 
+  const title = formData.get('title') as string;
+  const postLink = formData.get('postLink') as string | null;
   const content = formData.get('content') as string;
   const platforms = formData.getAll('platforms') as string[];
   const scheduledDateStr = formData.get('scheduledDate') as string;
 
-  if (!content || platforms.length === 0 || !scheduledDateStr) {
+  if (!title || !content || platforms.length === 0 || !scheduledDateStr) {
     throw new Error('Missing required fields');
   }
 
@@ -44,6 +46,8 @@ export async function createManualPost(projectId: string, formData: FormData) {
   await prisma.post.create({
     data: {
       projectId,
+      title,
+      postLink: postLink || null,
       content,
       platforms,
       scheduledDate: new Date(scheduledDateStr),

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createManualPost, deleteScheduledPost } from '@/app/actions/post';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
@@ -123,10 +123,15 @@ export default function DashboardClient({
               </SelectContent>
             </Select>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button>+ Log Manual Update</Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => window.location.href = `/api/projects/${projectId}/export`}>
+              <Download className="w-4 h-4 mr-2" />
+              Export to Excel
+            </Button>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button>+ Log Manual Update</Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Log Personal/Manual Update</DialogTitle>
@@ -135,6 +140,26 @@ export default function DashboardClient({
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleManualEntry} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Post Title</Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    required
+                    placeholder="Enter post title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="postLink">Post Link / URL (Optional)</Label>
+                  <Input
+                    id="postLink"
+                    name="postLink"
+                    type="url"
+                    placeholder="https://"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="content">Content</Label>
                   <Textarea
@@ -187,6 +212,7 @@ export default function DashboardClient({
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

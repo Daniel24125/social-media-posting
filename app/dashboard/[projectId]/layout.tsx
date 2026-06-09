@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, PenSquare, Settings, Users } from 'lucide-react';
+import { WorkspaceSwitcher } from '@/components/shared/WorkspaceSwitcher';
 
 export default async function ProjectDashboardLayout({
   children,
@@ -62,19 +63,10 @@ export default async function ProjectDashboardLayout({
       {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-zinc-800">
-          <select 
-            className="w-full bg-transparent border-none text-sm font-semibold focus:ring-0 dark:text-white"
-            defaultValue={projectId}
-            // Ideally, this would use a Client Component for the onChange handler to navigate,
-            // but for simplicity in a server layout, we render a static visual or we can
-            // add a small client component wrapper later if needed.
-          >
-            {userProjects.map((m) => (
-              <option key={m.projectId} value={m.projectId}>
-                {m.project.name}
-              </option>
-            ))}
-          </select>
+          <WorkspaceSwitcher 
+            currentProjectId={projectId} 
+            projects={userProjects.map(m => ({ id: m.project.id, name: m.project.name }))} 
+          />
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">

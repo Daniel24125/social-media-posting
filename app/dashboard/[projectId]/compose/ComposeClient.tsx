@@ -73,6 +73,16 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
           )}
 
           <div className="space-y-2">
+            <Label htmlFor="title">Post Title</Label>
+            <Input
+              id="title"
+              name="title"
+              required
+              placeholder="Give your post a title"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="content">Caption / Content</Label>
             <Textarea
               id="content"

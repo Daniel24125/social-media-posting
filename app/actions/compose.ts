@@ -10,6 +10,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
     throw new Error('Not authenticated');
   }
 
+  const title = formData.get('title') as string;
   const content = formData.get('content') as string;
   const platforms = formData.getAll('platforms') as string[];
   const isInstant = formData.get('isInstant') === 'true';
@@ -17,7 +18,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
   const imageUrl = formData.get('imageUrl') as string | null;
   const imageBlobPath = formData.get('imageBlobPath') as string | null;
 
-  if (!content || platforms.length === 0 || (!isInstant && !scheduledDateStr)) {
+  if (!title || !content || platforms.length === 0 || (!isInstant && !scheduledDateStr)) {
     throw new Error('Missing required fields');
   }
 
@@ -46,6 +47,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
   const post = await prisma.post.create({
     data: {
       projectId,
+      title,
       content,
       platforms,
       scheduledDate: isInstant ? new Date() : new Date(scheduledDateStr!),
