@@ -12,7 +12,7 @@ export default async function ProjectDashboardPage({
   const session = await auth0.getSession();
 
   if (!session || !session.user) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   // Fetch the posts for this project

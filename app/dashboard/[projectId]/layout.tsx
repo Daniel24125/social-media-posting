@@ -15,7 +15,7 @@ export default async function ProjectDashboardLayout({
   const session = await auth0.getSession();
 
   if (!session || !session.user) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -23,7 +23,7 @@ export default async function ProjectDashboardLayout({
   });
 
   if (!dbUser) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   const membership = await prisma.projectMember.findUnique({
@@ -116,7 +116,7 @@ export default async function ProjectDashboardLayout({
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {dbUser.name}
               </p>
-              <a href="/api/auth/logout" className="text-xs text-red-600 hover:underline">
+              <a href="/auth/logout" className="text-xs text-red-600 hover:underline">
                 Sign out
               </a>
             </div>

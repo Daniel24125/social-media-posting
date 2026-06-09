@@ -12,7 +12,7 @@ export default async function SettingsPage({
   const session = await auth0.getSession();
 
   if (!session || !session.user) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   // Fetch the members for this project
