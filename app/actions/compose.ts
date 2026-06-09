@@ -12,11 +12,12 @@ export async function createScheduledPost(projectId: string, formData: FormData)
 
   const content = formData.get('content') as string;
   const platforms = formData.getAll('platforms') as string[];
-  const scheduledDateStr = formData.get('scheduledDate') as string;
+  const isInstant = formData.get('isInstant') === 'true';
+  const scheduledDateStr = formData.get('scheduledDate') as string | null;
   const imageUrl = formData.get('imageUrl') as string | null;
   const imageBlobPath = formData.get('imageBlobPath') as string | null;
 
-  if (!content || platforms.length === 0 || !scheduledDateStr) {
+  if (!content || platforms.length === 0 || (!isInstant && !scheduledDateStr)) {
     throw new Error('Missing required fields');
   }
 
@@ -42,18 +43,38 @@ export async function createScheduledPost(projectId: string, formData: FormData)
     throw new Error('Unauthorized');
   }
 
-  await prisma.post.create({
+  const post = await prisma.post.create({
     data: {
       projectId,
       content,
       platforms,
-      scheduledDate: new Date(scheduledDateStr),
-      status: 'PENDING',
+      scheduledDate: isInstant ? new Date() : new Date(scheduledDateStr!),
+      status: isInstant ? 'PROCESSING' : 'PENDING',
       postedBy: dbUser.id,
       imageUrl: imageUrl || null,
       imageBlobPath: imageBlobPath || null,
     },
   });
+
+  if (isInstant && process.env.MAKE_WEBHOOK_URL) {
+    try {
+      await fetch(process.env.MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId: post.id,
+          content,
+          platforms,
+          imageUrl: imageUrl || null,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to trigger instant post webhook:', err);
+      throw new Error('Failed to trigger the webhook for instant posting. Please try again.');
+    }
+  }
 
   redirect(`/dashboard/${projectId}`);
 }
