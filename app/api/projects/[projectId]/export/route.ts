@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { auth0 } from '@/lib/auth0';
 import * as xlsx from 'xlsx';
 import { format } from 'date-fns';
+import { Post } from '@prisma/client';
 
 export async function GET(
   request: Request,
@@ -23,7 +24,7 @@ export async function GET(
 
   const exportData: Record<string, string>[] = [];
 
-  posts.forEach(post => {
+  posts.forEach((post: Post) => {
     const dateFormatted = format(new Date(post.scheduledDate), 'dd/MM/yyyy');
 
     if (post.platforms.length === 0) {
