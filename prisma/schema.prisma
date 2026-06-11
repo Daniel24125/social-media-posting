@@ -19,7 +19,8 @@ model Project {
   name          String
   createdAt     DateTime        @default(now())
   members       ProjectMember[]
-  posts         Post[]
+  posts             Post[]
+  connectedAccounts ConnectedAccount[]
 }
 
 model ProjectMember {
@@ -49,4 +50,20 @@ model Post {
   postedBy       String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model ConnectedAccount {
+  id            String    @id @default(uuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platform      String    // "LINKEDIN", "X", "INSTAGRAM"
+  profileId     String?   // The ID returned by the social network
+  profileHandle String?   // The display name/handle (e.g., @sunrise_project)
+  accessToken   String    @db.Text
+  refreshToken  String?   @db.Text
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([projectId, platform]) // One connection per platform per project
 }

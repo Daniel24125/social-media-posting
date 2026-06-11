@@ -2,7 +2,7 @@ import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, PenSquare, Settings, Users } from 'lucide-react';
+import { LayoutDashboard, PenSquare, Settings, Link as LinkIcon } from 'lucide-react';
 import { WorkspaceSwitcher } from '@/components/shared/WorkspaceSwitcher';
 
 export default async function ProjectDashboardLayout({
@@ -95,6 +95,15 @@ export default async function ProjectDashboardLayout({
               >
                 <Settings className="h-4 w-4" />
                 Workspace Settings
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={`/dashboard/${projectId}/integrations`}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Integrations
               </Link>
             </li>
           </ul>

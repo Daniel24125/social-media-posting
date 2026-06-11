@@ -7,11 +7,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { FormContainer } from "@/components/shared/FormContainer";
 import { toast } from "sonner";
-import { Linkedin, Twitter, Instagram, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-export default function ComposeClient({ projectId }: { projectId: string }) {
+const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
+const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+  </svg>
+);
+
+const InstagramIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+  </svg>
+);
+
+export default function ComposeClient({ 
+  projectId, 
+  connectedPlatforms 
+}: { 
+  projectId: string;
+  connectedPlatforms: string[];
+}) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInstant, setIsInstant] = useState(false);
@@ -71,6 +99,16 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
         title="Compose Post"
         description="Create and schedule a new publication across multiple platforms."
       >
+        {connectedPlatforms.length === 0 && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Platforms Connected</AlertTitle>
+            <AlertDescription>
+              You must connect at least one social media account before composing a post. Please visit the Integrations page to connect your accounts.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           {error && (
             <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-100 dark:bg-red-900/30 dark:border-red-900 dark:text-red-400">
@@ -142,24 +180,28 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
             <div className="space-y-3">
               <Label>Target Platforms</Label>
               <div className="space-y-3">
-                {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => {
-                  const Icon = platform === 'LINKEDIN' ? Linkedin : platform === 'X' ? Twitter : Instagram;
-                  const colorClass = platform === 'LINKEDIN' ? 'text-blue-600' : platform === 'X' ? 'text-neutral-900 dark:text-white' : 'text-pink-600';
-                  return (
-                    <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                      <input
-                        type="checkbox"
-                        name="platforms"
-                        value={platform}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
-                      />
-                      <Icon className={`w-5 h-5 ml-3 ${colorClass}`} />
-                      <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-200">
-                        {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
-                      </span>
-                    </label>
-                  );
-                })}
+                {connectedPlatforms.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No platforms connected.</p>
+                ) : (
+                  connectedPlatforms.map((platform) => {
+                    const Icon = platform === 'LINKEDIN' ? LinkedinIcon : platform === 'X' ? XIcon : InstagramIcon;
+                    const colorClass = platform === 'LINKEDIN' ? 'text-blue-600' : platform === 'X' ? 'text-neutral-900 dark:text-white' : 'text-pink-600';
+                    return (
+                      <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                        <input
+                          type="checkbox"
+                          name="platforms"
+                          value={platform}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
+                        />
+                        <Icon className={`w-5 h-5 ml-3 ${colorClass}`} />
+                        <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-200">
+                          {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -208,7 +250,7 @@ export default function ComposeClient({ projectId }: { projectId: string }) {
           <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
             <Button
               type="submit"
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || isUploading || connectedPlatforms.length === 0}
               size="lg"
             >
               {isSubmitting ? (
