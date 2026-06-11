@@ -80,6 +80,7 @@ export default function DashboardClient({
       document.body.removeChild(a);
       toast.success("Export successful");
     } catch (error) {
+      console.error(error);
       toast.error("Failed to export data");
     } finally {
       setIsExporting(false);

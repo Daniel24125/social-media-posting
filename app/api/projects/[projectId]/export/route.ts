@@ -19,19 +19,14 @@ export async function GET(
     orderBy: { scheduledDate: 'desc' }
   });
 
-  const users = await prisma.user.findMany({
-    where: { id: { in: posts.map(p => p.postedBy) } }
-  });
-  const userMap = new Map(users.map(u => [u.id, u.name || u.email]));
 
-  // 2. Flatten data: 1 row per platform for accurate Excel tracking
-  const exportData: any[] = [];
+
+  const exportData: Record<string, string>[] = [];
 
   posts.forEach(post => {
     const dateFormatted = format(new Date(post.scheduledDate), 'dd/MM/yyyy');
 
     if (post.platforms.length === 0) {
-      // Fallback for posts with no platforms
       exportData.push({
         'Date': dateFormatted,
         'Type of activity': 'Post on social Media',

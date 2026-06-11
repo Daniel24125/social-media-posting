@@ -62,7 +62,7 @@ export default function ComposeClient({
       setBlobUrl(newBlob.url);
       setBlobPath(newBlob.pathname);
       toast.success("Image uploaded successfully");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast.error('Failed to upload image. Please try again.');
       setError('Failed to upload image. Please try again.');
@@ -85,10 +85,11 @@ export default function ComposeClient({
       await createScheduledPost(projectId, formData);
       toast.success(isInstant ? "Post published instantly!" : "Post scheduled successfully!");
       // Redirect happens in the server action
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Failed to schedule post');
-      setError(err.message || 'Failed to schedule post');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to schedule post';
+      toast.error(errorMessage);
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };

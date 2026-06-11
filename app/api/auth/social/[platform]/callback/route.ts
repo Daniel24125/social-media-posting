@@ -26,7 +26,6 @@ export async function GET(
   }
 
   const { platform } = await params;
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/${platform}/callback`;
 
   // Verify user has access to this project
   const dbUser = await prisma.user.findUnique({
@@ -47,9 +46,9 @@ export async function GET(
   if (!membership) return new NextResponse('Unauthorized for this project', { status: 403 });
 
   let accessToken = '';
-  let refreshToken = null;
-  let expiresAt = null;
-  let profileId = null;
+  const refreshToken = null;
+  const expiresAt = null;
+  const profileId = null;
   let profileHandle = null;
   const dbPlatformId = platform.toUpperCase(); // "LINKEDIN", "X", "INSTAGRAM"
 

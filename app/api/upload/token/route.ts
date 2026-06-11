@@ -9,7 +9,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
+      onBeforeGenerateToken: async () => {
         const session = await auth0.getSession();
         if (!session || !session.user) {
           throw new Error('Unauthenticated upload attempt blocked');
@@ -22,15 +22,15 @@ export async function POST(request: Request): Promise<NextResponse> {
           }),
         };
       },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
+      onUploadCompleted: async () => {
         // Complete internal backend verification logs here if necessary
       },
     });
 
     return NextResponse.json(jsonResponse);
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || 'Blob initialization failed' },
+      { error: (error as Error).message || 'Blob initialization failed' },
       { status: 400 }
     );
   }

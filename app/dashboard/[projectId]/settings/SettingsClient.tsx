@@ -14,7 +14,7 @@ export default function SettingsClient({
   members,
 }: {
   projectId: string;
-  members: any[];
+  members: { id: string; role: string; user: { name: string | null; email: string; } }[];
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +31,9 @@ export default function SettingsClient({
       await addTeamMember(projectId, formData);
       setSuccess('Team member added successfully!');
       (e.target as HTMLFormElement).reset();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || 'Failed to add team member');
+      setError(err instanceof Error ? err.message : 'Failed to add team member');
     } finally {
       setIsSubmitting(false);
     }

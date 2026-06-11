@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export default async function DashboardRootPage() {
   const session = await auth0.getSession();
 
-  if (!session || !session.user) {
+  if (!session || !session.user || typeof session.user.email !== 'string') {
     redirect('/auth/login');
   }
 

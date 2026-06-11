@@ -56,9 +56,9 @@ export async function addTeamMember(projectId: string, formData: FormData) {
         role: 'MEMBER',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     // Unique constraint violation if already added
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002') {
       throw new Error('User is already a member of this project.');
     }
     throw error;

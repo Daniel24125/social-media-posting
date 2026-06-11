@@ -9,11 +9,11 @@ export default async function DashboardLayout({
 }) {
   const session = await auth0.getSession();
 
-  if (!session || !session.user) {
+  if (!session || !session.user || typeof session.user.email !== 'string') {
     redirect('/auth/login');
   }
 
-  const { email, name, sub } = session.user;
+  const { email, name } = session.user;
 
   // User Synchronization Sync
   let dbUser = await prisma.user.findUnique({
