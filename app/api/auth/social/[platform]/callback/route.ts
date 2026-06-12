@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
 
 export async function GET(
   request: Request,
@@ -48,62 +49,104 @@ export async function GET(
   let accessToken = '';
   const refreshToken = null;
   const expiresAt = null;
-  const profileId = null;
-  let profileHandle = null;
-  const dbPlatformId = platform.toUpperCase(); // "LINKEDIN", "X", "INSTAGRAM"
+  let profileId: string | null = null;
+  let profileHandle: string | null = null;
+  const dbPlatformId = platform.toUpperCase(); // "LINKEDIN-PERSONAL", "LINKEDIN-PAGE", "X", "INSTAGRAM"
 
-  // Scaffold token exchange logic
+  // Token exchange logic
   switch (platform) {
-    case 'linkedin': {
-      // TODO: Implement actual token exchange POST request to LinkedIn
-      // const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', { ... })
-      
-      // Placeholder for scaffold
-      accessToken = `mock_linkedin_access_token_${code}`;
-      profileHandle = 'LinkedIn User';
+    case 'linkedin-personal':
+    case 'linkedin-page': {
+      const isPersonal = platform === 'linkedin-personal';
+      const clientId = isPersonal ? process.env.LINKEDIN_PERSONAL_CLIENT_ID : process.env.LINKEDIN_PAGE_CLIENT_ID;
+      const clientSecret = isPersonal ? process.env.LINKEDIN_PERSONAL_CLIENT_SECRET : process.env.LINKEDIN_PAGE_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
+        return new NextResponse(`LinkedIn ${isPersonal ? 'Personal' : 'Page'} credentials not configured`, { status: 500 });
+      }
+
+      const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/${platform}/callback`;
+
+      const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('LinkedIn Token Error:', errorText);
+        return new NextResponse('Failed to exchange token', { status: 500 });
+      }
+
+      const tokenData = await tokenResponse.json();
+      accessToken = tokenData.access_token;
+
+      if (isPersonal) {
+        // Fetch profile to get urn and name
+        const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          profileId = profileData.sub; // This is the URN in OIDC
+          profileHandle = profileData.name;
+        } else {
+          profileId = 'urn:li:person:unknown';
+          profileHandle = 'LinkedIn User (Personal)';
+        }
+      } else {
+        const cookieStore = await cookies();
+        cookieStore.set('linkedin_temp_token', accessToken, { secure: true, httpOnly: true });
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        return NextResponse.redirect(`${baseUrl}/dashboard/${projectId}/integrations/linkedin/select`);
+      }
       break;
     }
     case 'x': {
-      // TODO: Implement actual token exchange POST request to X/Twitter
       accessToken = `mock_x_access_token_${code}`;
       profileHandle = '@twitter_user';
+      profileId = 'mock_x_id';
       break;
     }
     case 'instagram': {
-      // TODO: Implement actual token exchange POST request to Meta Graph API
       accessToken = `mock_instagram_access_token_${code}`;
       profileHandle = '@instagram_user';
+      profileId = 'mock_ig_id';
       break;
     }
     default:
       return new NextResponse('Invalid platform', { status: 400 });
   }
 
-  // Upsert the token into the ConnectedAccount table
-  await prisma.connectedAccount.upsert({
+  // Save the token into the ConnectedAccount table
+  const existingAccount = await prisma.connectedAccount.findFirst({
     where: {
-      projectId_platform: {
-        projectId,
-        platform: dbPlatformId,
-      },
-    },
-    update: {
-      accessToken,
-      refreshToken,
-      expiresAt,
-      profileId,
-      profileHandle,
-    },
-    create: {
       projectId,
       platform: dbPlatformId,
-      accessToken,
-      refreshToken,
-      expiresAt,
-      profileId,
-      profileHandle,
-    },
+      profileId: profileId || null
+    }
   });
+
+  if (existingAccount) {
+    await prisma.connectedAccount.update({
+      where: { id: existingAccount.id },
+      data: { accessToken, refreshToken, expiresAt, profileHandle }
+    });
+  } else {
+    await prisma.connectedAccount.create({
+      data: {
+        projectId, platform: dbPlatformId, accessToken, refreshToken, expiresAt, profileId, profileHandle
+      }
+    });
+  }
 
   // Redirect back to integrations page
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';

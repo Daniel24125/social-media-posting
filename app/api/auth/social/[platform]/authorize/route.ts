@@ -26,14 +26,7 @@ export async function GET(
   let authUrl = '';
 
   switch (platform) {
-    case 'linkedin': {
-      const clientId = process.env.LINKEDIN_CLIENT_ID;
-      if (!clientId) return new NextResponse('LinkedIn Client ID not configured', { status: 500 });
-      
-      const scope = encodeURIComponent('w_member_social openid profile email');
-      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${scope}`;
-      break;
-    }
+
     case 'x': {
       const clientId = process.env.X_CLIENT_ID;
       if (!clientId) return new NextResponse('X Client ID not configured', { status: 500 });

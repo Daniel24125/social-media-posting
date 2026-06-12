@@ -10,10 +10,14 @@ export default async function ComposePage({
 
   const connections = await prisma.connectedAccount.findMany({
     where: { projectId },
-    select: { platform: true }
+    select: { id: true, platform: true, profileHandle: true }
   });
 
-  const connectedPlatforms = connections.map(c => c.platform);
+  const connectedPlatforms = connections.map(c => ({
+    id: c.id,
+    platform: c.platform,
+    profileHandle: c.profileHandle
+  }));
 
   return (
     <div>

@@ -42,3 +42,43 @@ export async function disconnectAccount(projectId: string, platform: string) {
   revalidatePath(`/dashboard/${projectId}/integrations`);
   revalidatePath(`/dashboard/${projectId}/compose`);
 }
+
+export async function saveLinkedinPage(projectId: string, profileId: string, profileHandle: string) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) throw new Error('Not authenticated');
+
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('linkedin_temp_token')?.value;
+
+  if (!accessToken) throw new Error('No access token found. Please authenticate again.');
+
+  const existingAccount = await prisma.connectedAccount.findFirst({
+    where: {
+      projectId,
+      platform: 'LINKEDIN-PAGE',
+      profileId
+    }
+  });
+
+  if (existingAccount) {
+    await prisma.connectedAccount.update({
+      where: { id: existingAccount.id },
+      data: { accessToken, profileHandle }
+    });
+  } else {
+    await prisma.connectedAccount.create({
+      data: {
+        projectId,
+        platform: 'LINKEDIN-PAGE',
+        accessToken,
+        profileId,
+        profileHandle
+      }
+    });
+  }
+
+  cookieStore.delete('linkedin_temp_token');
+  revalidatePath(`/dashboard/${projectId}/integrations`);
+  revalidatePath(`/dashboard/${projectId}/compose`);
+}

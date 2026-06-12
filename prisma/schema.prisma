@@ -65,5 +65,5 @@ model ConnectedAccount {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@unique([projectId, platform]) // One connection per platform per project
+  @@unique([projectId, platform, profileId]) // One connection per platform/profile per project
 }

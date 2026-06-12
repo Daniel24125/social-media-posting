@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { disconnectAccount } from '@/app/actions/integrations';
 import { redirect } from 'next/navigation';
 import { auth0 } from '@/lib/auth0';
+import { ConnectButton } from './ConnectButton';
 
 const platforms = [
-  { id: 'LINKEDIN', name: 'LinkedIn', description: 'Connect to post updates to your LinkedIn profile or company page.' },
-  { id: 'X', name: 'X (Twitter)', description: 'Connect to post tweets to your X account.' },
-  { id: 'INSTAGRAM', name: 'Instagram', description: 'Connect to post images to your Instagram account.' }
+  { id: 'LINKEDIN-PERSONAL', authPath: 'linkedin-personal', name: 'LinkedIn (Personal)', description: 'Connect to post updates to your personal LinkedIn profile.' },
+  { id: 'LINKEDIN-PAGE', authPath: 'linkedin-page', name: 'LinkedIn (Company Page)', description: 'Connect to post updates to a LinkedIn organization page.' },
+  { id: 'X', authPath: 'x', name: 'X (Twitter)', description: 'Connect to post tweets to your X account.' },
+  { id: 'INSTAGRAM', authPath: 'instagram', name: 'Instagram', description: 'Connect to post images to your Instagram account.' }
 ];
 
 export default async function IntegrationsPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -37,12 +39,12 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ p
           const isConnected = !!connection;
 
           return (
-            <Card key={platform.id}>
+            <Card key={platform.id} className="flex flex-col h-full">
               <CardHeader>
                 <CardTitle>{platform.name}</CardTitle>
                 <CardDescription>{platform.description}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 {isConnected ? (
                   <div className="text-sm">
                     <span className="text-green-600 font-medium flex items-center gap-2">
@@ -76,14 +78,12 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ p
                     </Button>
                   </form>
                 ) : (
-                  <form action={async () => {
-                    'use server';
-                    redirect(`/api/auth/social/${platform.id.toLowerCase()}/authorize?projectId=${projectId}`);
-                  }} className="w-full">
-                    <Button variant="default" className="w-full" type="submit">
-                      Connect {platform.name}
-                    </Button>
-                  </form>
+                  <ConnectButton 
+                    platformId={platform.id} 
+                    projectId={projectId} 
+                    platformName={platform.name} 
+                    authPath={platform.authPath} 
+                  />
                 )}
               </CardFooter>
             </Card>

@@ -38,7 +38,7 @@ export default function ComposeClient({
   connectedPlatforms 
 }: { 
   projectId: string;
-  connectedPlatforms: string[];
+  connectedPlatforms: { id: string, platform: string, profileHandle: string | null }[];
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -184,20 +184,25 @@ export default function ComposeClient({
                 {connectedPlatforms.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">No platforms connected.</p>
                 ) : (
-                  connectedPlatforms.map((platform) => {
-                    const Icon = platform === 'LINKEDIN' ? LinkedinIcon : platform === 'X' ? XIcon : InstagramIcon;
-                    const colorClass = platform === 'LINKEDIN' ? 'text-blue-600' : platform === 'X' ? 'text-neutral-900 dark:text-white' : 'text-pink-600';
+                  connectedPlatforms.map((conn) => {
+                    const platform = conn.platform;
+                    const isLinkedin = platform.startsWith('LINKEDIN');
+                    const Icon = isLinkedin ? LinkedinIcon : platform === 'X' ? XIcon : InstagramIcon;
+                    const colorClass = isLinkedin ? 'text-blue-600' : platform === 'X' ? 'text-neutral-900 dark:text-white' : 'text-pink-600';
+                    const displayName = conn.profileHandle || (platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase());
+                    const value = `${platform}:${conn.id}`;
+
                     return (
-                      <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                      <label key={conn.id} className="flex items-center p-3 border border-gray-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                         <input
                           type="checkbox"
                           name="platforms"
-                          value={platform}
+                          value={value}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-600 dark:bg-zinc-700"
                         />
                         <Icon className={`w-5 h-5 ml-3 ${colorClass}`} />
                         <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-200">
-                          {platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}
+                          {isLinkedin ? `LinkedIn (${displayName})` : displayName}
                         </span>
                       </label>
                     );
