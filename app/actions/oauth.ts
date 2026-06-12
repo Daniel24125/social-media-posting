@@ -1,21 +1,39 @@
 'use server';
 
-export async function getLinkedInAuthorizeUrl(type: 'personal' | 'page', projectId: string) {
-  const clientId = type === 'personal' 
-    ? process.env.LINKEDIN_PERSONAL_CLIENT_ID 
-    : process.env.LINKEDIN_PAGE_CLIENT_ID;
-
-  if (!clientId) {
-    return { error: 'LinkedIn Client ID not configured in your environment variables.' };
-  }
-
+export async function getAuthorizeUrl(authPath: string, projectId: string) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const redirectUri = `${baseUrl}/api/auth/social/linkedin-${type}/callback`;
-  const scope = type === 'personal'
-    ? 'openid profile email w_member_social'
-    : 'openid profile email w_member_social w_organization_social r_organization_admin';
+  const redirectUri = `${baseUrl}/api/auth/social/${authPath}/callback`;
 
-  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${encodeURIComponent(scope)}`;
-
-  return { url: authUrl };
+  switch (authPath) {
+    case 'linkedin-personal': {
+      const clientId = process.env.LINKEDIN_PERSONAL_CLIENT_ID;
+      if (!clientId) return { error: 'LinkedIn Personal Client ID not configured in your environment variables.' };
+      
+      const scope = encodeURIComponent('openid profile email w_member_social');
+      return { url: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
+    }
+    case 'linkedin-page': {
+      const clientId = process.env.LINKEDIN_PAGE_CLIENT_ID;
+      if (!clientId) return { error: 'LinkedIn Page Client ID not configured in your environment variables.' };
+      
+      const scope = encodeURIComponent('openid profile email w_member_social w_organization_social r_organization_admin');
+      return { url: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
+    }
+    case 'x': {
+      const clientId = process.env.X_CLIENT_ID;
+      if (!clientId) return { error: 'X Client ID not configured in your environment variables.' };
+      
+      const scope = encodeURIComponent('tweet.write users.read offline.access');
+      return { url: `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}&code_challenge=challenge&code_challenge_method=plain` };
+    }
+    case 'instagram': {
+      const clientId = process.env.INSTAGRAM_CLIENT_ID;
+      if (!clientId) return { error: 'Instagram Client ID not configured in your environment variables.' };
+      
+      const scope = encodeURIComponent('instagram_basic instagram_content_publish pages_show_list pages_read_engagement');
+      return { url: `https://www.facebook.com/v19.0/dialog/oauth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
+    }
+    default:
+      return { error: 'Invalid platform specified.' };
+  }
 }
