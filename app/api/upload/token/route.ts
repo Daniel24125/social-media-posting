@@ -22,13 +22,11 @@ export async function POST(request: Request): Promise<NextResponse> {
           }),
         };
       },
-      onUploadCompleted: async () => {
-        // Complete internal backend verification logs here if necessary
-      },
     });
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
+    console.error("Vercel Blob Upload Error:", error);
     return NextResponse.json(
       { error: (error as Error).message || 'Blob initialization failed' },
       { status: 400 }

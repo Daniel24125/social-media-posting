@@ -12,7 +12,7 @@ interface ConnectButtonProps {
   authPath: string;
 }
 
-export function ConnectButton({ platformId, projectId, platformName, authPath }: ConnectButtonProps) {
+export function ConnectButton({ projectId, platformName, authPath }: ConnectButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // We explicitly take the type parameter to satisfy the connection routing
