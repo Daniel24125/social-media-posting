@@ -68,6 +68,27 @@ export async function publishToLinkedin(
   }
 
   // 2. Publish Post
+  let postContent: Record<string, unknown> = {};
+
+  if (mediaUrns && mediaUrns.length > 0) {
+    if (mediaUrns.length === 1) {
+      // LinkedIn schema for exactly 1 image
+      postContent = {
+        media: {
+          id: mediaUrns[0]
+        }
+      };
+    } else {
+      // LinkedIn schema for 2 to 20 images
+      postContent = {
+        multiImage: {
+          images: mediaUrns.map(urn => ({ id: urn }))
+        }
+      };
+    }
+  }
+
+  // Construct the final payload for the /rest/posts endpoint
   const payload: Record<string, unknown> = {
     author: authorUrn,
     commentary: content,
@@ -78,16 +99,9 @@ export async function publishToLinkedin(
       thirdPartyDistributionChannels: []
     },
     lifecycleState: "PUBLISHED",
-    isReshareDisabledByAuthor: false
+    isReshareDisabledByAuthor: false,
+    ...(Object.keys(postContent).length > 0 && { content: postContent })
   };
-
-  if (mediaUrns.length > 0) {
-    payload.content = {
-      media: {
-        id: mediaUrns.length === 1 ? mediaUrns[0] : mediaUrns
-      }
-    };
-  }
 
   const postResponse = await fetch('https://api.linkedin.com/rest/posts', {
     method: 'POST',
