@@ -55,15 +55,20 @@ export default function ComposeClient({
     setIsUploading(true);
     setError(null);
     try {
+      console.log("🟡 FRONTEND: Initiating Vercel Blob upload for file:", file.name);
       const newBlob = await upload(file.name, file, {
         access: 'public',
         handleUploadUrl: '/api/upload/token',
+        onUploadProgress: (progressEvent) => {
+          console.log(`🔵 FRONTEND PROGRESS: ${progressEvent.loaded} / ${progressEvent.total} bytes (${progressEvent.percentage}%)`);
+        }
       });
+      console.log("🟢 FRONTEND: Upload promise resolved successfully!", newBlob);
       setBlobUrl(newBlob.url);
       setBlobPath(newBlob.pathname);
       toast.success("Image uploaded successfully");
     } catch (err) {
-      console.error("Upload Execution Error:", err);
+      console.error("🔴 FRONTEND: Upload promise rejected!", err);
       const errorMessage = err instanceof Error ? err.message : 'There was an issue uploading your media.';
       toast.error('Upload Failed', {
         description: errorMessage,
