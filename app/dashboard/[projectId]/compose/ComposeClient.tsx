@@ -3,15 +3,26 @@
 import { useState, useRef } from 'react';
 import { upload } from '@vercel/blob/client';
 import { createScheduledPost } from '@/app/actions/compose';
+import { deleteMedia } from '@/app/actions/media';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { FormContainer } from "@/components/shared/FormContainer";
 import { toast } from "sonner";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -46,6 +57,7 @@ export default function ComposeClient({
   const [blobUrls, setBlobUrls] = useState<string[]>([]);
   const [blobPaths, setBlobPaths] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +99,22 @@ export default function ComposeClient({
     } finally {
       // CRITICAL FIX: Always release the loading lock
       setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async (urlToRemove: string) => {
+    setDeletingUrl(urlToRemove);
+    try {
+      await deleteMedia(urlToRemove);
+      const indexToRemove = blobUrls.indexOf(urlToRemove);
+      setBlobUrls(prev => prev.filter(url => url !== urlToRemove));
+      setBlobPaths(prev => prev.filter((_, idx) => idx !== indexToRemove));
+      toast.success('Image removed successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to remove image');
+    } finally {
+      setDeletingUrl(null);
     }
   };
 
@@ -179,12 +207,62 @@ export default function ComposeClient({
                 </div>
               ) : blobUrls.length > 0 ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="flex flex-wrap justify-center gap-4 mb-4">
-                    {blobUrls.map((url, idx) => (
-                      <img key={idx} src={url} alt={`Preview ${idx + 1}`} className="max-h-32 rounded-lg object-cover" />
-                    ))}
+                  <div className="w-full max-w-[280px] sm:max-w-sm mb-4" onClick={(e) => e.stopPropagation()}>
+                    <Carousel className="w-full">
+                      <CarouselContent>
+                        {blobUrls.map((url, idx) => (
+                          <CarouselItem key={idx}>
+                            <div className="relative p-1">
+                              <img src={url} alt={`Preview ${idx + 1}`} className="max-h-48 w-full object-cover rounded-lg border border-gray-200 dark:border-zinc-700" />
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={deletingUrl === url}
+                                    className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow-md transition-colors disabled:opacity-50"
+                                  >
+                                    {deletingUrl === url ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent onClick={(e) => e.stopPropagation()}>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete Image</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to delete this image? This action cannot be undone.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <DialogClose asChild>
+                                      <button type="button" className="px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        Cancel
+                                      </button>
+                                    </DialogClose>
+                                    <DialogClose asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveImage(url)}
+                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                      >
+                                        Delete
+                                      </button>
+                                    </DialogClose>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      {blobUrls.length > 1 && (
+                        <>
+                          <CarouselPrevious type="button" className="-left-4 sm:-left-12" />
+                          <CarouselNext type="button" className="-right-4 sm:-right-12" />
+                        </>
+                      )}
+                    </Carousel>
                   </div>
-                  <p className="text-sm text-green-600 font-medium">Upload complete! Click to replace.</p>
+                  <p className="text-sm text-green-600 font-medium">Upload complete! Click above to replace or drag to add more.</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center">

@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -21,7 +28,9 @@ import { PlatformTag } from "@/components/shared/PlatformTag";
 
 type Post = {
   id: string;
+  title: string;
   content: string;
+  imageUrls: string[];
   platforms: string[];
   scheduledDate: Date;
   status: string;
@@ -40,6 +49,7 @@ export default function DashboardClient({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterPlatform, setFilterPlatform] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [errorDialogMessage, setErrorDialogMessage] = useState<string | null>(null);
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -255,7 +265,7 @@ export default function DashboardClient({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Content</TableHead>
+                <TableHead>Title</TableHead>
                 <TableHead>Platforms</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -264,9 +274,13 @@ export default function DashboardClient({
             </TableHeader>
             <TableBody>
               {filteredPosts.map((post) => (
-                <TableRow key={post.id}>
+                <TableRow 
+                  key={post.id} 
+                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                  onClick={() => setSelectedPost(post)}
+                >
                   <TableCell className="max-w-md">
-                    <div className="line-clamp-2">{post.content}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{post.title}</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
@@ -281,7 +295,7 @@ export default function DashboardClient({
                   <TableCell>
                     <StatusBadge status={post.status} error={post.errorMessage} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <Dialog>
                       <DialogTrigger asChild>
                         <button
@@ -346,6 +360,107 @@ export default function DashboardClient({
                 OK
               </Button>
             </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post Details Dialog */}
+      <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{selectedPost?.title}</DialogTitle>
+            <DialogDescription>
+              Scheduled for {selectedPost && format(new Date(selectedPost.scheduledDate), 'MMM d, yyyy')}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPost && (
+            <div className="space-y-6">
+              {selectedPost.imageUrls && selectedPost.imageUrls.length > 0 && (
+                <div className="flex justify-center bg-gray-50 dark:bg-zinc-900 rounded-lg p-4 border border-gray-100 dark:border-zinc-800">
+                  {selectedPost.imageUrls.length === 1 ? (
+                    <img src={selectedPost.imageUrls[0]} alt="Post media" className="max-h-64 object-contain rounded-md" />
+                  ) : (
+                    <Carousel className="w-full max-w-sm">
+                      <CarouselContent>
+                        {selectedPost.imageUrls.map((url, idx) => (
+                          <CarouselItem key={idx}>
+                            <div className="p-1">
+                              <img src={url} alt={`Post media ${idx + 1}`} className="max-h-64 w-full object-contain rounded-md" />
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious />
+                      <CarouselNext />
+                    </Carousel>
+                  )}
+                </div>
+              )}
+              
+              <div className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-lg border border-gray-100 dark:border-zinc-800">
+                <p className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{selectedPost.content}</p>
+              </div>
+
+              <div className="flex gap-2">
+                {selectedPost.platforms.map(p => <PlatformTag key={p} platform={p} />)}
+                <StatusBadge status={selectedPost.status} error={selectedPost.errorMessage} />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4 flex justify-between sm:justify-between w-full">
+            <div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    disabled={deletingPostId === selectedPost?.id}
+                  >
+                    {deletingPostId === selectedPost?.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                    Delete
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Post</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete this post? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <button type="button" className="px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                      </button>
+                    </DialogClose>
+                    <DialogClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedPost) {
+                            handleDelete(selectedPost.id);
+                            setSelectedPost(null);
+                          }
+                        }}
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        Delete
+                      </button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setSelectedPost(null)}>
+                Close
+              </Button>
+              <Button type="button" onClick={() => alert("Edit functionality coming soon")}>
+                Edit
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
