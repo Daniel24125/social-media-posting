@@ -14,13 +14,29 @@ export async function POST(request: Request): Promise<NextResponse> {
         if (!session || !session.user) {
           throw new Error('Unauthenticated upload attempt blocked');
         }
-        
+
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
           tokenPayload: JSON.stringify({
             userId: session.user.sub,
           }),
         };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('Vercel Blob finished uploading:', blob.url);
+
+        try {
+          const payload = JSON.parse(tokenPayload || '{}');
+          const userId = payload.userId;
+
+          // TODO: Add your database logic here (e.g., Prisma)
+          // Save `blob.url` to your user profile or media library
+          // await prisma.media.create({ data: { url: blob.url, userId } });
+
+        } catch (error) {
+          console.error("Failed to sync completed upload to database:", error);
+          throw new Error('Could not update database with uploaded file');
+        }
       },
     });
 

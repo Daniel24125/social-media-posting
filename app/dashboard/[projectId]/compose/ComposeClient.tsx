@@ -62,11 +62,15 @@ export default function ComposeClient({
       setBlobUrl(newBlob.url);
       setBlobPath(newBlob.pathname);
       toast.success("Image uploaded successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to upload image. Please try again.');
-      setError('Failed to upload image. Please try again.');
+    } catch (err: any) {
+      console.error("Upload Execution Error:", err);
+      const errorMessage = err.message || 'There was an issue uploading your media.';
+      toast.error('Upload Failed', {
+        description: errorMessage,
+      });
+      setError(errorMessage);
     } finally {
+      // CRITICAL FIX: Always release the loading lock
       setIsUploading(false);
     }
   };
