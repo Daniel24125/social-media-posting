@@ -39,7 +39,7 @@ export async function GET() {
             if (!account || !account.accessToken || !account.profileId) {
               throw new Error(`LinkedIn account not connected for platform ${platformType}`);
             }
-            await publishToLinkedin(account.accessToken, account.profileId, post.content, post.imageUrl);
+            await publishToLinkedin(account.accessToken, account.profileId, post.content, post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : null);
           }
           // Other platforms would be handled here
         }

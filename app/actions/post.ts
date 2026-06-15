@@ -99,11 +99,11 @@ export async function deleteScheduledPost(postId: string, projectId: string) {
     throw new Error('Post does not belong to this project');
   }
 
-  if (post.imageBlobPath) {
+  if (post.imageBlobPaths && post.imageBlobPaths.length > 0) {
     try {
-      await del(post.imageBlobPath);
+      await del(post.imageBlobPaths);
     } catch (err) {
-      console.error('Failed to delete blob image:', err);
+      console.error('Failed to delete blob images:', err);
     }
   }
 

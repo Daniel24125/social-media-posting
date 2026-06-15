@@ -2,64 +2,68 @@ export async function publishToLinkedin(
   accessToken: string,
   profileId: string, // Can be urn:li:person:ID or urn:li:organization:ID
   content: string,
-  imageUrl?: string | null
+  imageUrls?: string[] | null
 ) {
   const isOrganization = profileId.startsWith('urn:li:organization');
   const authorUrn = profileId.includes('urn:li:') ? profileId : (isOrganization ? `urn:li:organization:${profileId}` : `urn:li:person:${profileId}`);
 
-  let mediaUrn: string | null = null;
+  const mediaUrns: string[] = [];
 
-  // 1. If imageUrl exists, perform 2-step media upload
-  if (imageUrl) {
-    try {
-      // Step 1: Initialize Upload
-      const initResponse = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Linkedin-Version': '202605',
-          'X-Restli-Protocol-Version': '2.0.0'
-        },
-        body: JSON.stringify({
-          initializeUploadRequest: {
-            owner: authorUrn
-          }
-        })
-      });
+  // 1. If imageUrls exists, loop and perform 2-step media upload
+  if (imageUrls && imageUrls.length > 0) {
+    for (const imageUrl of imageUrls) {
+      try {
+        // Step 1: Initialize Upload
+        const initResponse = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Linkedin-Version': '202605',
+            'X-Restli-Protocol-Version': '2.0.0'
+          },
+          body: JSON.stringify({
+            initializeUploadRequest: {
+              owner: authorUrn
+            }
+          })
+        });
 
-      if (!initResponse.ok) {
-        const errorText = await initResponse.text();
-        throw new Error(`LinkedIn Image Initialization Failed: ${errorText}`);
+        if (!initResponse.ok) {
+          const errorText = await initResponse.text();
+          throw new Error(`LinkedIn Image Initialization Failed: ${errorText}`);
+        }
+
+        const initData = await initResponse.json();
+        const uploadUrl = initData.value.uploadUrl;
+        const mediaUrn = initData.value.image;
+
+        // Fetch the binary of the image to upload
+        const imageFetchResponse = await fetch(imageUrl);
+        if (!imageFetchResponse.ok) {
+          throw new Error(`Failed to fetch image binary from URL: ${imageUrl}`);
+        }
+        const imageBinary = await imageFetchResponse.arrayBuffer();
+
+        // Step 2: Upload Binary
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: imageBinary
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          throw new Error(`LinkedIn Image Upload Failed: ${errorText}`);
+        }
+
+        mediaUrns.push(mediaUrn);
+      } catch (err) {
+        console.error('LinkedIn Media Upload Error:', err);
+        throw err; // Fail fast if asset registration fails
       }
-
-      const initData = await initResponse.json();
-      const uploadUrl = initData.value.uploadUrl;
-      mediaUrn = initData.value.image;
-
-      // Fetch the binary of the image to upload
-      const imageFetchResponse = await fetch(imageUrl);
-      if (!imageFetchResponse.ok) {
-        throw new Error(`Failed to fetch image binary from URL: ${imageUrl}`);
-      }
-      const imageBinary = await imageFetchResponse.arrayBuffer();
-
-      // Step 2: Upload Binary
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: imageBinary
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`LinkedIn Image Upload Failed: ${errorText}`);
-      }
-    } catch (err) {
-      console.error('LinkedIn Media Upload Error:', err);
-      throw err; // Fail fast if asset registration fails
     }
   }
 
@@ -77,10 +81,10 @@ export async function publishToLinkedin(
     isReshareDisabledByAuthor: false
   };
 
-  if (mediaUrn) {
+  if (mediaUrns.length > 0) {
     payload.content = {
       media: {
-        id: mediaUrn
+        id: mediaUrns.length === 1 ? mediaUrns[0] : mediaUrns
       }
     };
   }

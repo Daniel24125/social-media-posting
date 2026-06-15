@@ -74,7 +74,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
           if (!account || !account.accessToken || !account.profileId) {
             throw new Error(`LinkedIn account not connected for platform ${platformType}`);
           }
-          await publishToLinkedin(account.accessToken, account.profileId, content, imageUrls.length > 0 ? imageUrls[0] : null);
+          await publishToLinkedin(account.accessToken, account.profileId, content, imageUrls && imageUrls.length > 0 ? imageUrls : null);
         }
         // If there are other platforms (e.g., X, Instagram), we would handle them here.
       }
