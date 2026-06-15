@@ -44,10 +44,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     console.log(`🟢 BACKEND: Returning JSON response for type: ${body.type}`);
     return NextResponse.json(jsonResponse);
     
-  } catch (error: any) {
-    console.error("🔴 BACKEND: Fatal error caught in handleUpload execution:", error.message || error);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("🔴 BACKEND: Fatal error caught in handleUpload execution:", errorMessage);
     return NextResponse.json(
-      { error: (error as Error).message || 'Blob initialization failed' },
+      { error: errorMessage || 'Blob initialization failed' },
       { status: 400 }
     );
   }
