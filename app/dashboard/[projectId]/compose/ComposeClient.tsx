@@ -62,9 +62,9 @@ export default function ComposeClient({
       setBlobUrl(newBlob.url);
       setBlobPath(newBlob.pathname);
       toast.success("Image uploaded successfully");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Upload Execution Error:", err);
-      const errorMessage = err.message || 'There was an issue uploading your media.';
+      const errorMessage = err instanceof Error ? err.message : 'There was an issue uploading your media.';
       toast.error('Upload Failed', {
         description: errorMessage,
       });
