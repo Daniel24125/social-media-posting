@@ -13,19 +13,28 @@ export async function deleteMedia(url: string) {
     throw new Error("Unauthorized");
   }
 
+  // BRIDGE: Look up the real internal Database User
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!dbUser) {
+    console.error("🔴 ACTION BLOCKED: User mapping failed. Auth0 user not in PostgreSQL.");
+    throw new Error("User mapping failed.");
+  }
+
   // Check if the database record actually exists
   const mediaRecord = await prisma.media.findFirst({ where: { url } });
   
   if (!mediaRecord) {
-    // THIS IS THE LIKELY CULPRIT: The webhook may have failed to create the record, 
-    // causing the action to abort before executing the Vercel Blob del() function.
     console.error("🔴 ACTION BLOCKED: Media record not found in PostgreSQL database for URL:", url);
     return { success: false, message: "Media not found in database" };
   }
 
-  if (mediaRecord.userId !== session.user.sub) {
-    console.error(`🔴 ACTION BLOCKED: User ID mismatch. RecordOwner: ${mediaRecord.userId}, SessionUser: ${session.user.sub}`);
-    throw new Error("Forbidden");
+  // CRITICAL FIX: Compare against the DB UUID, not the Auth0 sub
+  if (mediaRecord.userId !== dbUser.id) {
+    console.error(`🔴 ACTION BLOCKED: User ID mismatch. RecordOwner: ${mediaRecord.userId}, SessionUser: ${dbUser.id}`);
+    throw new Error("Forbidden: You do not own this file.");
   }
 
   try {

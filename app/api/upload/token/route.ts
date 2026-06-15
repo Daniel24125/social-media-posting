@@ -22,12 +22,21 @@ export async function POST(request: Request): Promise<NextResponse> {
           throw new Error('Unauthenticated upload attempt blocked');
         }
 
-        console.log("🟢 BACKEND: Auth0 session verified for user:", session.user.sub);
+        // BRIDGE: Look up the real internal Database User
+        const dbUser = await prisma.user.findUnique({
+          where: { email: session.user.email } 
+        });
+
+        if (!dbUser) {
+          throw new Error('Authenticated Auth0 user does not exist in the internal PostgreSQL database.');
+        }
+
+        console.log("🟢 BACKEND: Database User located:", dbUser.id);
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
           addRandomSuffix: true,
-          // THIS IS CRITICAL FOR THE WEBHOOK TO WORK:
-          tokenPayload: JSON.stringify({ userId: session.user.sub }),
+          // CRITICAL FIX: Pass the true DB UUID to the webhook, NOT the Auth0 sub!
+          tokenPayload: JSON.stringify({ userId: dbUser.id }),
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
