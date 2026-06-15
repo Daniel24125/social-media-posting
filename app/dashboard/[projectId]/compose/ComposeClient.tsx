@@ -43,30 +43,40 @@ export default function ComposeClient({
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInstant, setIsInstant] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [blobPath, setBlobPath] = useState<string | null>(null);
+  const [blobUrls, setBlobUrls] = useState<string[]>([]);
+  const [blobPaths, setBlobPaths] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (files.length > 4) {
+      toast.error('You can only upload a maximum of 4 images.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
     try {
-      console.log("🟡 FRONTEND: Initiating Vercel Blob upload for file:", file.name);
-      const newBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload/token',
-        onUploadProgress: (progressEvent) => {
-          console.log(`🔵 FRONTEND PROGRESS: ${progressEvent.loaded} / ${progressEvent.total} bytes (${progressEvent.percentage}%)`);
-        }
-      });
-      console.log("🟢 FRONTEND: Upload promise resolved successfully!", newBlob);
-      setBlobUrl(newBlob.url);
-      setBlobPath(newBlob.pathname);
-      toast.success("Image uploaded successfully");
+      console.log("🟡 FRONTEND: Initiating Vercel Blob upload for files:", files.map(f => f.name));
+      const uploadPromises = files.map(file => 
+        upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload/token',
+          onUploadProgress: (progressEvent) => {
+            console.log(`🔵 FRONTEND PROGRESS [${file.name}]: ${progressEvent.loaded} / ${progressEvent.total} bytes (${progressEvent.percentage}%)`);
+          }
+        })
+      );
+      
+      const newBlobs = await Promise.all(uploadPromises);
+      console.log("🟢 FRONTEND: Upload promises resolved successfully!", newBlobs);
+      setBlobUrls(newBlobs.map(b => b.url));
+      setBlobPaths(newBlobs.map(b => b.pathname));
+      toast.success(`${newBlobs.length} image(s) uploaded successfully`);
     } catch (err) {
       console.error("🔴 FRONTEND: Upload promise rejected!", err);
       const errorMessage = err instanceof Error ? err.message : 'There was an issue uploading your media.';
@@ -86,8 +96,8 @@ export default function ComposeClient({
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    if (blobUrl) formData.append('imageUrl', blobUrl);
-    if (blobPath) formData.append('imageBlobPath', blobPath);
+    blobUrls.forEach(url => formData.append('imageUrls', url));
+    blobPaths.forEach(path => formData.append('imageBlobPaths', path));
     formData.append('isInstant', isInstant.toString());
 
     try {
@@ -155,9 +165,10 @@ export default function ComposeClient({
             >
               <input
                 type="file"
+                multiple
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/*"
+                accept="image/jpeg, image/png, image/webp"
                 className="hidden"
               />
 
@@ -166,10 +177,13 @@ export default function ComposeClient({
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Uploading media...</p>
                 </div>
-              ) : blobUrl ? (
-                <div className="flex flex-col items-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={blobUrl} alt="Preview" className="max-h-48 rounded-lg mb-4" />
+              ) : blobUrls.length > 0 ? (
+                <div className="flex flex-col items-center w-full">
+                  <div className="flex flex-wrap justify-center gap-4 mb-4">
+                    {blobUrls.map((url, idx) => (
+                      <img key={idx} src={url} alt={`Preview ${idx + 1}`} className="max-h-32 rounded-lg object-cover" />
+                    ))}
+                  </div>
                   <p className="text-sm text-green-600 font-medium">Upload complete! Click to replace.</p>
                 </div>
               ) : (

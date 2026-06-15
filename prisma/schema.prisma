@@ -11,6 +11,7 @@ model User {
   email         String          @unique
   name          String?
   memberships   ProjectMember[]
+  media         Media[]
   createdAt     DateTime        @default(now())
 }
 
@@ -41,8 +42,8 @@ model Post {
   title          String    @default("Untitled Post")
   postLink       String?   @db.Text
   content        String    @db.Text
-  imageUrl       String?   @db.Text
-  imageBlobPath  String?   @db.Text
+  imageUrls      String[]
+  imageBlobPaths String[]
   platforms      String[]
   scheduledDate  DateTime  @db.Date
   status         String    @default("PENDING")
@@ -66,4 +67,12 @@ model ConnectedAccount {
   updatedAt     DateTime  @updatedAt
 
   @@unique([projectId, platform, profileId]) // One connection per platform/profile per project
+}
+
+model Media {
+  id        String   @id @default(uuid())
+  url       String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

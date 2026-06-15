@@ -1,6 +1,7 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
@@ -32,7 +33,18 @@ export async function POST(request: Request): Promise<NextResponse> {
         console.log("🟢 BACKEND: Webhook received! onUploadCompleted triggered for:", blob.url);
 
         try {
-          // Database logic here...
+          const payload = JSON.parse(tokenPayload || '{}');
+          const userId = payload.userId;
+
+          if (userId) {
+            await prisma.media.create({
+              data: {
+                url: blob.url,
+                userId,
+              },
+            });
+          }
+
           console.log("🟢 BACKEND: Database updated successfully for payload:", tokenPayload);
         } catch (error) {
           console.error("🔴 BACKEND: Database update failed inside onUploadCompleted:", error);

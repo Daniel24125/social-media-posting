@@ -15,8 +15,8 @@ export async function createScheduledPost(projectId: string, formData: FormData)
   const platforms = formData.getAll('platforms') as string[];
   const isInstant = formData.get('isInstant') === 'true';
   const scheduledDateStr = formData.get('scheduledDate') as string | null;
-  const imageUrl = formData.get('imageUrl') as string | null;
-  const imageBlobPath = formData.get('imageBlobPath') as string | null;
+  const imageUrls = formData.getAll('imageUrls') as string[];
+  const imageBlobPaths = formData.getAll('imageBlobPaths') as string[];
 
   if (!title || !content || platforms.length === 0 || (!isInstant && !scheduledDateStr)) {
     throw new Error('Missing required fields');
@@ -53,8 +53,8 @@ export async function createScheduledPost(projectId: string, formData: FormData)
       scheduledDate: isInstant ? new Date() : new Date(scheduledDateStr!),
       status: isInstant ? 'PROCESSING' : 'PENDING',
       postedBy: dbUser.id,
-      imageUrl: imageUrl || null,
-      imageBlobPath: imageBlobPath || null,
+      imageUrls: imageUrls,
+      imageBlobPaths: imageBlobPaths,
     },
   });
 
@@ -74,7 +74,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
           if (!account || !account.accessToken || !account.profileId) {
             throw new Error(`LinkedIn account not connected for platform ${platformType}`);
           }
-          await publishToLinkedin(account.accessToken, account.profileId, content, imageUrl);
+          await publishToLinkedin(account.accessToken, account.profileId, content, imageUrls.length > 0 ? imageUrls[0] : null);
         }
         // If there are other platforms (e.g., X, Instagram), we would handle them here.
       }
