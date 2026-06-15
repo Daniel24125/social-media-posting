@@ -5,39 +5,40 @@ import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 
 export async function deleteMedia(url: string) {
-  // 1. Authenticate the request
+  console.log(`🟡 SERVER ACTION: Attempting to delete media URL: ${url}`);
+  
   const session = await auth0.getSession();
   if (!session || !session.user) {
-    throw new Error("Unauthorized: You must be logged in to delete media.");
+    console.error("🔴 ACTION BLOCKED: No authenticated session found.");
+    throw new Error("Unauthorized");
   }
 
-  // 2. Fetch the target media record to verify ownership
-  const mediaRecord = await prisma.media.findFirst({
-    where: { url }
-  });
-
+  // Check if the database record actually exists
+  const mediaRecord = await prisma.media.findFirst({ where: { url } });
+  
   if (!mediaRecord) {
-    console.warn("Media record not found in database.");
-    return { success: false, message: "Media not found" };
+    // THIS IS THE LIKELY CULPRIT: The webhook may have failed to create the record, 
+    // causing the action to abort before executing the Vercel Blob del() function.
+    console.error("🔴 ACTION BLOCKED: Media record not found in PostgreSQL database for URL:", url);
+    return { success: false, message: "Media not found in database" };
   }
 
-  // 3. Authorize ownership (Prevent users from deleting others' files)
   if (mediaRecord.userId !== session.user.sub) {
-    throw new Error("Forbidden: You do not own this file.");
+    console.error(`🔴 ACTION BLOCKED: User ID mismatch. RecordOwner: ${mediaRecord.userId}, SessionUser: ${session.user.sub}`);
+    throw new Error("Forbidden");
   }
 
   try {
-    // 4. Execute Cloud Deletion
+    console.log("🟡 SECURITY PASSED: Executing Vercel Blob del()...");
     await del(url);
+    console.log("🟢 VERCEL BLOB: File permanently deleted from cloud.");
 
-    // 5. Execute Database Deletion
-    await prisma.media.delete({
-      where: { id: mediaRecord.id }
-    });
+    await prisma.media.delete({ where: { id: mediaRecord.id } });
+    console.log("🟢 POSTGRESQL: Relational record deleted.");
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete media:", error);
-    throw new Error("Internal Server Error during deletion process");
+    console.error("🔴 FATAL ERROR: Deletion execution failed:", error);
+    throw new Error("Internal Server Error");
   }
 }

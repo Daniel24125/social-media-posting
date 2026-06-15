@@ -24,31 +24,47 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         console.log("🟢 BACKEND: Auth0 session verified for user:", session.user.sub);
         return {
-          // allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          addRandomSuffix: true,
+          // THIS IS CRITICAL FOR THE WEBHOOK TO WORK:
           tokenPayload: JSON.stringify({ userId: session.user.sub }),
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // If this log never appears in production, Vercel's webhook failed to reach your server.
-        console.log("🟢 BACKEND: Webhook received! onUploadCompleted triggered for:", blob.url);
-
+        console.log("🟡 BACKEND WEBHOOK: Triggered for URL:", blob.url);
+        
         try {
-          const payload = JSON.parse(tokenPayload || '{}');
-          const userId = payload.userId;
-
-          if (userId) {
-            await prisma.media.create({
-              data: {
-                url: blob.url,
-                userId,
-              },
-            });
+          // 1. Ensure the tokenPayload exists
+          if (!tokenPayload) {
+            throw new Error("No token payload provided by Vercel Blob.");
           }
 
-          console.log("🟢 BACKEND: Database updated successfully for payload:", tokenPayload);
+          // 2. Safely parse the stringified JSON payload
+          const parsedPayload = JSON.parse(tokenPayload);
+          const userId = parsedPayload.userId;
+
+          if (!userId) {
+            throw new Error("Parsed payload does not contain a userId.");
+          }
+
+          console.log(`🟡 BACKEND WEBHOOK: Attempting to save to Prisma for User: ${userId}`);
+
+          // 3. Execute the database insertion
+          const savedRecord = await prisma.media.create({
+            data: {
+              url: blob.url,
+              userId: userId,
+            }
+          });
+
+          console.log("🟢 BACKEND WEBHOOK: Successfully saved Media record to DB:", savedRecord.id);
+
         } catch (error) {
-          console.error("🔴 BACKEND: Database update failed inside onUploadCompleted:", error);
-          throw new Error('Could not update database with uploaded file');
+          // This catch block is critical. If Prisma fails (e.g., foreign key constraint, missing field), 
+          // this log will reveal the exact cause.
+          console.error("🔴 BACKEND WEBHOOK FATAL ERROR: Failed to save to PostgreSQL:", error);
+          // Note: Throwing an error here won't crash the frontend upload, 
+          // but it will flag the Vercel logs so we can see it.
         }
       },
     });

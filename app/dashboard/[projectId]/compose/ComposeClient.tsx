@@ -103,15 +103,25 @@ export default function ComposeClient({
   };
 
   const handleRemoveImage = async (urlToRemove: string) => {
+    console.log("🟡 FRONTEND: Trash button clicked for URL:", urlToRemove);
     setDeletingUrl(urlToRemove);
+    
     try {
-      await deleteMedia(urlToRemove);
-      const indexToRemove = blobUrls.indexOf(urlToRemove);
-      setBlobUrls(prev => prev.filter(url => url !== urlToRemove));
-      setBlobPaths(prev => prev.filter((_, idx) => idx !== indexToRemove));
-      toast.success('Image removed successfully');
-    } catch (err) {
-      console.error(err);
+      const response = await deleteMedia(urlToRemove);
+      console.log("🟡 FRONTEND: Server Action response:", response);
+
+      if (response?.success) {
+        console.log("🟢 FRONTEND: Deletion confirmed. Updating UI state...");
+        const indexToRemove = blobUrls.indexOf(urlToRemove);
+        setBlobUrls(prev => prev.filter(url => url !== urlToRemove));
+        setBlobPaths(prev => prev.filter((_, idx) => idx !== indexToRemove));
+        toast.success('Image removed successfully');
+      } else {
+        console.error("🔴 FRONTEND: Server Action returned failure:", response?.message);
+        toast.error('Failed to remove image: ' + (response?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error("🔴 FRONTEND: Server Action threw an exception:", error);
       toast.error('Failed to remove image');
     } finally {
       setDeletingUrl(null);
