@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { upload } from '@vercel/blob/client';
 import { createScheduledPost } from '@/app/actions/compose';
 import { deleteMedia } from '@/app/actions/media';
@@ -143,6 +144,7 @@ export default function ComposeClient({
       toast.success(isInstant ? "Post published instantly!" : "Post scheduled successfully!");
       // Redirect happens in the server action
     } catch (err) {
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err;
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to schedule post';
       toast.error(errorMessage);
