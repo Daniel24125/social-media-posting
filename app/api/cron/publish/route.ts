@@ -10,7 +10,15 @@ export async function GET(request: Request) {
   const expectedKey = process.env.API_CRON_KEY;
 
   if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {
-    return new Response('Unauthorized', { status: 401 });
+    // Return a self-diagnosing JSON payload so the GitHub Actions runner prints exactly what went wrong
+    return NextResponse.json({
+      error: "Unauthorized",
+      debug: {
+        envVarExists: !!expectedKey,
+        headerExists: !!authHeader,
+        headerMatches: authHeader === `Bearer ${expectedKey}`
+      }
+    }, { status: 401 });
   }
 
   try {
