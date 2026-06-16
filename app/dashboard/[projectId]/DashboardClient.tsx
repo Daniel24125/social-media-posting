@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createManualPost, deleteScheduledPost } from '@/app/actions/post';
-import { Trash2, Download, Loader2 } from 'lucide-react';
+import { createManualPost, deleteScheduledPost, putPostOnHold } from '@/app/actions/post';
+import { Trash2, Download, Loader2, Pause } from 'lucide-react';
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import {
@@ -32,7 +32,7 @@ type Post = {
   content: string;
   imageUrls: string[];
   platforms: string[];
-  scheduledDate: Date;
+  scheduledAt: Date | null;
   status: string;
   errorMessage: string | null;
   createdAt: Date;
@@ -55,7 +55,27 @@ export default function DashboardClient({
   const [isExporting, setIsExporting] = useState(false);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [holdingPostId, setHoldingPostId] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleHold = async (postId: string) => {
+    setHoldingPostId(postId);
+    startTransition(async () => {
+      try {
+        await putPostOnHold(postId, projectId);
+        setPosts((currentPosts) => 
+          currentPosts.map((p) => p.id === postId ? { ...p, status: 'ON_HOLD' } : p)
+        );
+        toast.success("Post put on hold");
+        router.refresh();
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to put post on hold');
+      } finally {
+        setHoldingPostId(null);
+      }
+    });
+  };
 
   const handleDelete = async (postId: string) => {
     setDeletingPostId(postId);
@@ -98,7 +118,7 @@ export default function DashboardClient({
   };
 
   // Stats
-  const totalScheduled = posts.filter((p) => p.status === 'PENDING').length;
+  const totalScheduled = posts.filter((p) => p.status === 'SCHEDULED').length;
   const totalPublished = posts.filter((p) => p.status === 'PUBLISHED').length;
   const totalFailed = posts.filter((p) => p.status === 'FAILED').length;
   const totalManual = posts.filter((p) => p.status === 'MANUAL').length;
@@ -148,7 +168,9 @@ export default function DashboardClient({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                <SelectItem value="ON_HOLD">On Hold</SelectItem>
                 <SelectItem value="PROCESSING">Processing</SelectItem>
                 <SelectItem value="PUBLISHED">Published</SelectItem>
                 <SelectItem value="FAILED">Failed</SelectItem>
@@ -290,7 +312,7 @@ export default function DashboardClient({
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {format(new Date(post.scheduledDate), 'MMM d, yyyy')}
+                    {post.scheduledAt ? format(new Date(post.scheduledAt), 'MMM d, yyyy') : 'No Date'}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={post.status} error={post.errorMessage} />
@@ -370,7 +392,7 @@ export default function DashboardClient({
           <DialogHeader>
             <DialogTitle>{selectedPost?.title}</DialogTitle>
             <DialogDescription>
-              Scheduled for {selectedPost && format(new Date(selectedPost.scheduledDate), 'MMM d, yyyy')}
+              {selectedPost?.scheduledAt ? `Scheduled for ${format(new Date(selectedPost.scheduledAt), 'MMM d, yyyy')}` : 'No schedule date'}
             </DialogDescription>
           </DialogHeader>
           
@@ -452,6 +474,22 @@ export default function DashboardClient({
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              {selectedPost?.status === 'SCHEDULED' && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    handleHold(selectedPost.id);
+                    setSelectedPost(null);
+                  }}
+                  disabled={holdingPostId === selectedPost.id || isPending}
+                  className="ml-2"
+                >
+                  {holdingPostId === selectedPost.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+                  Put on Hold
+                </Button>
+              )}
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => setSelectedPost(null)}>

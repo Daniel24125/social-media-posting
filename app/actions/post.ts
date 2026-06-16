@@ -50,7 +50,7 @@ export async function createManualPost(projectId: string, formData: FormData) {
       postLink: postLink || null,
       content,
       platforms,
-      scheduledDate: new Date(scheduledDateStr),
+      scheduledAt: new Date(`${scheduledDateStr}T00:00:00Z`),
       status: 'MANUAL',
       postedBy: dbUser.id,
     },
@@ -109,6 +109,53 @@ export async function deleteScheduledPost(postId: string, projectId: string) {
 
   await prisma.post.delete({
     where: { id: postId },
+  });
+
+  revalidatePath(`/dashboard/${projectId}`);
+}
+
+export async function putPostOnHold(postId: string, projectId: string) {
+  const session = await auth0.getSession();
+  if (!session || !session.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!dbUser) {
+    throw new Error('User not found');
+  }
+
+  const membership = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: dbUser.id,
+        projectId,
+      },
+    },
+  });
+
+  if (!membership) {
+    throw new Error('Unauthorized');
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+  });
+
+  if (!post) {
+    throw new Error('Post not found');
+  }
+
+  if (post.projectId !== projectId) {
+    throw new Error('Post does not belong to this project');
+  }
+
+  await prisma.post.update({
+    where: { id: postId },
+    data: { status: 'ON_HOLD' },
   });
 
   revalidatePath(`/dashboard/${projectId}`);

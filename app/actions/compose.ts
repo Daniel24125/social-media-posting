@@ -17,6 +17,7 @@ export async function createScheduledPost(projectId: string, formData: FormData)
   const scheduledDateStr = formData.get('scheduledDate') as string | null;
   const imageUrls = formData.getAll('imageUrls') as string[];
   const imageBlobPaths = formData.getAll('imageBlobPaths') as string[];
+  const postAction = formData.get('postAction') as string || 'SCHEDULE';
 
   if (!title || !content || platforms.length === 0 || (!isInstant && !scheduledDateStr)) {
     throw new Error('Missing required fields');
@@ -44,14 +45,24 @@ export async function createScheduledPost(projectId: string, formData: FormData)
     throw new Error('Unauthorized');
   }
 
+  let scheduledAt: Date | null = null;
+  if (isInstant) {
+    scheduledAt = new Date();
+  } else if (scheduledDateStr) {
+    // Normalize to Midnight UTC
+    scheduledAt = new Date(`${scheduledDateStr}T00:00:00Z`);
+  }
+
+  const status = isInstant ? 'PROCESSING' : (postAction === 'DRAFT' ? 'DRAFT' : 'SCHEDULED');
+
   const post = await prisma.post.create({
     data: {
       projectId,
       title,
       content,
       platforms,
-      scheduledDate: isInstant ? new Date() : new Date(scheduledDateStr!),
-      status: isInstant ? 'PROCESSING' : 'PENDING',
+      scheduledAt,
+      status,
       postedBy: dbUser.id,
       imageUrls: imageUrls,
       imageBlobPaths: imageBlobPaths,

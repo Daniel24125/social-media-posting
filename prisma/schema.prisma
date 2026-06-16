@@ -45,8 +45,8 @@ model Post {
   imageUrls      String[]
   imageBlobPaths String[]
   platforms      String[]
-  scheduledDate  DateTime  @db.Date
-  status         String    @default("PENDING")
+  scheduledAt    DateTime?
+  status         String    @default("DRAFT")
   errorMessage   String?   @db.Text
   postedBy       String
   createdAt      DateTime  @default(now())

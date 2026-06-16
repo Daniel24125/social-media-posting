@@ -17,7 +17,7 @@ export async function GET(
   // 1. Fetch posts and users
   const posts = await prisma.post.findMany({
     where: { projectId },
-    orderBy: { scheduledDate: 'desc' }
+    orderBy: { scheduledAt: 'desc' }
   });
 
 
@@ -25,7 +25,7 @@ export async function GET(
   const exportData: Record<string, string>[] = [];
 
   posts.forEach((post: Post) => {
-    const dateFormatted = format(new Date(post.scheduledDate), 'dd/MM/yyyy');
+    const dateFormatted = post.scheduledAt ? format(new Date(post.scheduledAt), 'dd/MM/yyyy') : 'N/A';
 
     if (post.platforms.length === 0) {
       exportData.push({

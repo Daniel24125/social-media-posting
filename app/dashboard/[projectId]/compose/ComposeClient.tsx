@@ -27,13 +27,13 @@ import {
 
 const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
   </svg>
 );
 
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
   </svg>
 );
 
@@ -45,10 +45,10 @@ const InstagramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function ComposeClient({ 
-  projectId, 
-  connectedPlatforms 
-}: { 
+export default function ComposeClient({
+  projectId,
+  connectedPlatforms
+}: {
   projectId: string;
   connectedPlatforms: { id: string, platform: string, profileHandle: string | null }[];
 }) {
@@ -60,6 +60,7 @@ export default function ComposeClient({
   const [error, setError] = useState<string | null>(null);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitActionRef = useRef<'SCHEDULE' | 'DRAFT'>('SCHEDULE');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -74,24 +75,18 @@ export default function ComposeClient({
     setIsUploading(true);
     setError(null);
     try {
-      console.log("🟡 FRONTEND: Initiating Vercel Blob upload for files:", files.map(f => f.name));
-      const uploadPromises = files.map(file => 
+      const uploadPromises = files.map(file =>
         upload(file.name, file, {
           access: 'public',
           handleUploadUrl: '/api/upload/token',
-          onUploadProgress: (progressEvent) => {
-            console.log(`🔵 FRONTEND PROGRESS [${file.name}]: ${progressEvent.loaded} / ${progressEvent.total} bytes (${progressEvent.percentage}%)`);
-          }
         })
       );
-      
+
       const newBlobs = await Promise.all(uploadPromises);
-      console.log("🟢 FRONTEND: Upload promises resolved successfully!", newBlobs);
       setBlobUrls(newBlobs.map(b => b.url));
       setBlobPaths(newBlobs.map(b => b.pathname));
       toast.success(`${newBlobs.length} image(s) uploaded successfully`);
     } catch (err) {
-      console.error("🔴 FRONTEND: Upload promise rejected!", err);
       const errorMessage = err instanceof Error ? err.message : 'There was an issue uploading your media.';
       toast.error('Upload Failed', {
         description: errorMessage,
@@ -104,25 +99,20 @@ export default function ComposeClient({
   };
 
   const handleRemoveImage = async (urlToRemove: string) => {
-    console.log("🟡 FRONTEND: Trash button clicked for URL:", urlToRemove);
     setDeletingUrl(urlToRemove);
-    
+
     try {
       const response = await deleteMedia(urlToRemove);
-      console.log("🟡 FRONTEND: Server Action response:", response);
 
       if (response?.success) {
-        console.log("🟢 FRONTEND: Deletion confirmed. Updating UI state...");
         const indexToRemove = blobUrls.indexOf(urlToRemove);
         setBlobUrls(prev => prev.filter(url => url !== urlToRemove));
         setBlobPaths(prev => prev.filter((_, idx) => idx !== indexToRemove));
         toast.success('Image removed successfully');
       } else {
-        console.error("🔴 FRONTEND: Server Action returned failure:", response?.message);
         toast.error('Failed to remove image: ' + (response?.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error("🔴 FRONTEND: Server Action threw an exception:", error);
       toast.error('Failed to remove image');
     } finally {
       setDeletingUrl(null);
@@ -138,13 +128,21 @@ export default function ComposeClient({
     blobUrls.forEach(url => formData.append('imageUrls', url));
     blobPaths.forEach(path => formData.append('imageBlobPaths', path));
     formData.append('isInstant', isInstant.toString());
+    formData.append('postAction', submitActionRef.current);
 
     try {
       await createScheduledPost(projectId, formData);
-      toast.success(isInstant ? "Post published instantly!" : "Post scheduled successfully!");
-      // Redirect happens in the server action
+      // Redirect happens in the server action, which throws NEXT_REDIRECT
     } catch (err) {
-      if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err;
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') {
+        const successMessage = isInstant && submitActionRef.current === 'SCHEDULE' 
+          ? "Your post was successfully published!" 
+          : submitActionRef.current === 'DRAFT'
+          ? "Your draft was successfully saved!"
+          : "Your post was successfully scheduled!";
+        toast.success(successMessage);
+        throw err;
+      }
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to schedule post';
       toast.error(errorMessage);
@@ -366,13 +364,23 @@ export default function ComposeClient({
             </div>
           </div>
 
-          <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
+          <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end gap-3">
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={isSubmitting || isUploading || connectedPlatforms.length === 0}
+              onClick={() => submitActionRef.current = 'DRAFT'}
+            >
+              {isSubmitting && submitActionRef.current === 'DRAFT' && <Loader2 className="animate-spin w-4 h-4 mr-2" />}
+              Save as Draft
+            </Button>
             <Button
               type="submit"
               disabled={isSubmitting || isUploading || connectedPlatforms.length === 0}
               size="lg"
+              onClick={() => submitActionRef.current = 'SCHEDULE'}
             >
-              {isSubmitting ? (
+              {isSubmitting && submitActionRef.current === 'SCHEDULE' ? (
                 <>
                   <Loader2 className="animate-spin w-4 h-4 mr-2" />
                   {isInstant ? 'Posting...' : 'Scheduling...'}
