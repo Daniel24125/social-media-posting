@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/publish?key=smp_secure_cron_key_9x8A2mP5",
-      "schedule": "0 10 * * *"
-    }
-  ]
-}

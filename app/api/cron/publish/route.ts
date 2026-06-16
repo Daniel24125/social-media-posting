@@ -6,20 +6,12 @@ import { publishToTwitter } from '@/lib/social/twitter';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  // 1. Extract the secure key from the URL query parameter
-  const { searchParams } = new URL(request.url);
-  const providedKey = searchParams.get('key');
-  
-  // 2. Read the custom environment variable
+  const authHeader = request.headers.get('authorization');
   const expectedKey = process.env.API_CRON_KEY;
 
-  // 3. Validate
-  if (!providedKey || providedKey !== expectedKey) {
-    console.error("❌ CRON SECURITY FAILED: Invalid or missing custom API key.");
+  if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {
     return new Response('Unauthorized', { status: 401 });
   }
-
-  console.log("🟢 CRON SECURITY PASSED: Custom API key verified.");
 
   try {
     const postsToProcess = await prisma.post.findMany({
