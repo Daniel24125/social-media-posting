@@ -16,7 +16,7 @@ export async function publishToTwitter(
   });
 
   const rwClient = client.readWrite;
-  let mediaIds: string[] = [];
+  const mediaIds: string[] = [];
 
   // 1. Process and Upload Media
   if (imageUrls && imageUrls.length > 0) {
@@ -42,9 +42,9 @@ export async function publishToTwitter(
 
   // 2. Publish the Tweet
   try {
-    const payload: any = { text: content };
+    const payload: { text: string; media?: { media_ids: [string] } } = { text: content };
     if (mediaIds.length > 0) {
-      payload.media = { media_ids: mediaIds };
+      payload.media = { media_ids: mediaIds as unknown as [string] };
     }
 
     const { data } = await rwClient.v2.tweet(payload);

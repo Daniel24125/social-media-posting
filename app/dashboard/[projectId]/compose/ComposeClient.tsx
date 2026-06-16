@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { upload } from '@vercel/blob/client';
 import { createScheduledPost } from '@/app/actions/compose';
 import { deleteMedia } from '@/app/actions/media';
@@ -112,7 +112,7 @@ export default function ComposeClient({
       } else {
         toast.error('Failed to remove image: ' + (response?.message || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove image');
     } finally {
       setDeletingUrl(null);
