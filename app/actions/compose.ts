@@ -4,6 +4,7 @@ import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { publishToLinkedin } from '@/lib/social/linkedin';
+import { publishToTwitter } from '@/lib/social/twitter';
 export async function createScheduledPost(projectId: string, formData: FormData) {
   const session = await auth0.getSession();
   if (!session || !session.user) {
@@ -86,8 +87,14 @@ export async function createScheduledPost(projectId: string, formData: FormData)
             throw new Error(`LinkedIn account not connected for platform ${platformType}`);
           }
           await publishToLinkedin(account.accessToken, account.profileId, content, imageUrls && imageUrls.length > 0 ? imageUrls : null);
+        } else if (platformType.startsWith('TWITTER') || platformType.startsWith('X')) {
+          const account = accounts.find((a) => a.id === accountId);
+          if (!account || !account.accessToken || !account.refreshToken) {
+            throw new Error(`X (Twitter) account not connected for platform ${platformType}`);
+          }
+          await publishToTwitter(account.accessToken, account.refreshToken, content, imageUrls && imageUrls.length > 0 ? imageUrls : null);
         }
-        // If there are other platforms (e.g., X, Instagram), we would handle them here.
+        // If there are other platforms (e.g., Instagram), we would handle them here.
       }
 
       await prisma.post.update({
