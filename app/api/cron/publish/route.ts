@@ -7,7 +7,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const actualSecret = process.env.CRON_SECRET;
+
+  // --- THE LOG TRAP ---
+  console.log("================ CRON DEBUG ================");
+  console.log("1. Header received from Vercel:", authHeader || "UNDEFINED/MISSING");
+  console.log("2. Secret in Next.js Environment:", actualSecret || "UNDEFINED/MISSING");
+  console.log("3. Are they an exact match?", authHeader === `Bearer ${actualSecret}`);
+  console.log("============================================");
+
+  if (authHeader !== `Bearer ${actualSecret}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 
