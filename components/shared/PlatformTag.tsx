@@ -9,9 +9,7 @@ export function PlatformTag({ platform }: { platform: string }) {
   if (platformType.startsWith('LINKEDIN')) {
     display = 'LinkedIn';
     colorClasses = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50";
-  } else if (platformType === 'X') {
-    display = 'X (Twitter)';
-    colorClasses = "bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 hover:bg-gray-900 dark:hover:bg-gray-200";
+
   } else if (platformType === 'INSTAGRAM') {
     display = 'Instagram';
     colorClasses = "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 hover:bg-pink-200 dark:hover:bg-pink-900/50";

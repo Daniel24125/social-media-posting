@@ -9,7 +9,6 @@ import { ConnectButton } from './ConnectButton';
 const platforms = [
   { id: 'LINKEDIN-PERSONAL', authPath: 'linkedin-personal', name: 'LinkedIn (Personal)', description: 'Connect to post updates to your personal LinkedIn profile.' },
   { id: 'LINKEDIN-PAGE', authPath: 'linkedin-page', name: 'LinkedIn (Company Page)', description: 'Connect to post updates to a LinkedIn organization page.' },
-  { id: 'X', authPath: 'x', name: 'X (Twitter)', description: 'Connect to post tweets to your X account.' },
   { id: 'INSTAGRAM', authPath: 'instagram', name: 'Instagram', description: 'Connect to post images to your Instagram account.' }
 ];
 

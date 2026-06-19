@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createManualPost, deleteScheduledPost, putPostOnHold } from '@/app/actions/post';
-import { Trash2, Download, Loader2, Pause } from 'lucide-react';
+import { Trash2, Download, Loader2, Pause, Plus } from 'lucide-react';
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import {
@@ -185,7 +185,6 @@ export default function DashboardClient({
               <SelectContent>
                 <SelectItem value="ALL">All Platforms</SelectItem>
                 <SelectItem value="LINKEDIN">LinkedIn</SelectItem>
-                <SelectItem value="X">X (Twitter)</SelectItem>
                 <SelectItem value="INSTAGRAM">Instagram</SelectItem>
               </SelectContent>
             </Select>
@@ -197,7 +196,7 @@ export default function DashboardClient({
             </Button>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button>+ Log Manual Update</Button>
+                <Button variant="outline">+ Log Manual Update</Button>
               </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
@@ -241,7 +240,7 @@ export default function DashboardClient({
                 <div className="space-y-2">
                   <Label>Target Platforms</Label>
                   <div className="flex gap-4">
-                    {['LINKEDIN', 'X', 'INSTAGRAM'].map((platform) => (
+                    {['LINKEDIN', 'INSTAGRAM'].map((platform) => (
                       <label key={platform} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -249,7 +248,7 @@ export default function DashboardClient({
                           value={platform}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-zinc-700 dark:bg-zinc-800"
                         />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{platform === 'X' ? 'X (Twitter)' : platform.charAt(0) + platform.slice(1).toLowerCase()}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{platform.charAt(0) + platform.slice(1).toLowerCase()}</span>
                       </label>
                     ))}
                   </div>
@@ -280,6 +279,10 @@ export default function DashboardClient({
               </form>
             </DialogContent>
           </Dialog>
+          <Button onClick={() => router.push(`/dashboard/${projectId}/compose`)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Compose Post
+          </Button>
           </div>
         </div>
 

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import { TwitterApi } from 'twitter-api-v2';
 
 export async function GET(
   request: Request,
@@ -15,17 +14,12 @@ export async function GET(
 
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const returnedState = searchParams.get('state');
   const error = searchParams.get('error');
 
   const { platform } = await params;
-  const cookieStore = await cookies();
   
   // Retrieve projectId based on platform
-  let projectId = searchParams.get('state'); // Default for LinkedIn
-  if (platform === 'x') {
-    projectId = cookieStore.get('x_project_id')?.value || null;
-  }
+  const projectId = searchParams.get('state'); // Default for LinkedIn
 
   if (error) {
     console.error('OAuth Error:', error, searchParams.get('error_description'));
@@ -55,7 +49,7 @@ export async function GET(
   if (!membership) return new NextResponse('Unauthorized for this project', { status: 403 });
 
   let accessToken = '';
-  let refreshToken: string | null = null;
+  const refreshToken: string | null = null;
   const expiresAt: Date | null = null;
   let profileId: string | null = null;
   let profileHandle: string | null = null;
@@ -118,48 +112,7 @@ export async function GET(
       }
       break;
     }
-    case 'x': {
-      const codeVerifier = cookieStore.get('x_code_verifier')?.value;
-      const savedState = cookieStore.get('x_oauth_state')?.value;
-      
-      if (!codeVerifier || !savedState || returnedState !== savedState) {
-        return new NextResponse('Invalid or missing X security cookies. Please try connecting again.', { status: 400 });
-      }
 
-      const clientId = process.env.TWITTER_CLIENT_ID || process.env.TWITTER_CLIENTID;
-      const clientSecret = process.env.TWITTER_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        return new NextResponse('X Client ID or Secret not configured', { status: 500 });
-      }
-
-      const client = new TwitterApi({ clientId, clientSecret });
-      const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/x/callback`;
-
-      try {
-        const { client: loggedClient, accessToken: xAccess, refreshToken: xRefresh } = await client.loginWithOAuth2({
-          code,
-          codeVerifier,
-          redirectUri,
-        });
-
-        const { data: userObject } = await loggedClient.v2.me();
-
-        accessToken = xAccess;
-        refreshToken = xRefresh || null;
-        profileId = userObject.id;
-        profileHandle = `@${userObject.username}`;
-
-        // Clean up cookies
-        cookieStore.delete('x_code_verifier');
-        cookieStore.delete('x_oauth_state');
-        cookieStore.delete('x_project_id');
-      } catch (err) {
-        console.error('X Token Exchange Error:', err);
-        return new NextResponse('Failed to exchange X token.', { status: 500 });
-      }
-      break;
-    }
     case 'instagram': {
       accessToken = `mock_instagram_access_token_${code}`;
       profileHandle = '@instagram_user';

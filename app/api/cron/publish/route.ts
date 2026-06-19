@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { publishToLinkedin } from '@/lib/social/linkedin';
-import { publishToTwitter } from '@/lib/social/twitter';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,17 +55,6 @@ export async function GET(request: Request) {
             await publishToLinkedin(
               account.accessToken,
               account.profileId,
-              post.content,
-              post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : null
-            );
-          } else if (platformType.startsWith('TWITTER') || platformType.startsWith('X')) {
-            const account = accounts.find((a) => a.id === accountId);
-            if (!account || !account.accessToken || !account.refreshToken) {
-              throw new Error(`X (Twitter) account not connected for platform ${platformType}`);
-            }
-            await publishToTwitter(
-              account.accessToken,
-              account.refreshToken,
               post.content,
               post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : null
             );
