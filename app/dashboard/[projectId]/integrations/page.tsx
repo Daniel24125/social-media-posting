@@ -9,7 +9,8 @@ import { ConnectButton } from './ConnectButton';
 const platforms = [
   { id: 'LINKEDIN-PERSONAL', authPath: 'linkedin-personal', name: 'LinkedIn (Personal)', description: 'Connect to post updates to your personal LinkedIn profile.' },
   { id: 'LINKEDIN-PAGE', authPath: 'linkedin-page', name: 'LinkedIn (Company Page)', description: 'Connect to post updates to a LinkedIn organization page.' },
-  { id: 'INSTAGRAM', authPath: 'instagram', name: 'Instagram', description: 'Connect to post images to your Instagram account.' }
+  { id: 'FACEBOOK', authPath: 'meta', name: 'Facebook Pages', description: 'Connect your Facebook Pages for cross-posting.' },
+  { id: 'INSTAGRAM', authPath: 'meta', name: 'Instagram Professional', description: 'Connect your Instagram Professional accounts.' }
 ];
 
 export default async function IntegrationsPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -34,8 +35,8 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ p
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {platforms.map(platform => {
-          const connection = connections.find(c => c.platform === platform.id);
-          const isConnected = !!connection;
+          const platformConnections = connections.filter(c => c.platform === platform.id);
+          const isConnected = platformConnections.length > 0;
 
           return (
             <Card key={platform.id} className="flex flex-col h-full">
@@ -45,19 +46,23 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ p
               </CardHeader>
               <CardContent className="flex-1">
                 {isConnected ? (
-                  <div className="text-sm">
-                    <span className="text-green-600 font-medium flex items-center gap-2">
-                      <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  <div className="space-y-4">
+                    <div className="text-sm">
+                      <span className="text-green-600 font-medium flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        Connected Accounts
                       </span>
-                      Connected
-                    </span>
-                    {connection.profileHandle && (
-                      <p className="mt-2 text-gray-700 dark:text-gray-300">
-                        As: <strong>{connection.profileHandle}</strong>
-                      </p>
-                    )}
+                    </div>
+                    <div className="space-y-2">
+                      {platformConnections.map(conn => (
+                        <div key={conn.id} className="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                          <span className="font-medium">{conn.profileHandle || 'Unknown'}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
@@ -66,23 +71,22 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ p
                   </div>
                 )}
               </CardContent>
-              <CardFooter>
-                {isConnected ? (
+              <CardFooter className="flex flex-col gap-2">
+                <ConnectButton 
+                  platformId={platform.id} 
+                  projectId={projectId} 
+                  platformName={platform.name} 
+                  authPath={platform.authPath} 
+                />
+                {isConnected && (
                   <form action={async () => {
                     'use server';
                     await disconnectAccount(projectId, platform.id);
-                  }} className="w-full">
-                    <Button variant="destructive" className="w-full" type="submit">
-                      Disconnect
+                  }} className="w-full mt-2">
+                    <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" type="submit">
+                      Disconnect All {platform.name}
                     </Button>
                   </form>
-                ) : (
-                  <ConnectButton 
-                    platformId={platform.id} 
-                    projectId={projectId} 
-                    platformName={platform.name} 
-                    authPath={platform.authPath} 
-                  />
                 )}
               </CardFooter>
             </Card>

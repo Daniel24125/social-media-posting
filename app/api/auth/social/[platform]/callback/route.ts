@@ -113,11 +113,31 @@ export async function GET(
       break;
     }
 
-    case 'instagram': {
-      accessToken = `mock_instagram_access_token_${code}`;
-      profileHandle = '@instagram_user';
-      profileId = 'mock_ig_id';
-      break;
+    case 'meta': {
+      const clientId = process.env.META_APP_ID;
+      const clientSecret = process.env.META_APP_SECRET;
+
+      if (!clientId || !clientSecret) {
+        return new NextResponse('Meta credentials not configured', { status: 500 });
+      }
+
+      const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/meta/callback`;
+
+      const tokenResponse = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`);
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Meta Token Error:', errorText);
+        return new NextResponse('Failed to exchange token', { status: 500 });
+      }
+
+      const tokenData = await tokenResponse.json();
+      accessToken = tokenData.access_token;
+      
+      const cookieStore = await cookies();
+      cookieStore.set('meta_temp_token', accessToken, { secure: true, httpOnly: true });
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      return NextResponse.redirect(`${baseUrl}/dashboard/${projectId}/integrations/meta/select`);
     }
     default:
       return new NextResponse('Invalid platform', { status: 400 });

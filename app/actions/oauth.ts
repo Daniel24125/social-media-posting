@@ -21,11 +21,11 @@ export async function getAuthorizeUrl(authPath: string, projectId: string) {
       return { url: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
     }
 
-    case 'instagram': {
-      const clientId = process.env.INSTAGRAM_CLIENT_ID;
-      if (!clientId) return { error: 'Instagram Client ID not configured in your environment variables.' };
+    case 'meta': {
+      const clientId = process.env.META_APP_ID;
+      if (!clientId) return { error: 'Meta App ID not configured in your environment variables.' };
 
-      const scope = encodeURIComponent('instagram_basic instagram_content_publish pages_show_list pages_read_engagement');
+      const scope = encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts');
       return { url: `https://www.facebook.com/v19.0/dialog/oauth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
     }
     default:
