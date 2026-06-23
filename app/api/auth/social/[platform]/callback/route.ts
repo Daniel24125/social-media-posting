@@ -67,7 +67,7 @@ export async function GET(
         return new NextResponse(`LinkedIn ${isPersonal ? 'Personal' : 'Page'} credentials not configured`, { status: 500 });
       }
 
-      const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/${platform}/callback`;
+      const redirectUri = `${process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000')}/api/auth/social/${platform}/callback`;
 
       const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
         method: 'POST',
@@ -107,7 +107,7 @@ export async function GET(
       } else {
         const cookieStore = await cookies();
         cookieStore.set('linkedin_temp_token', accessToken, { secure: true, httpOnly: true });
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
         return NextResponse.redirect(`${baseUrl}/dashboard/${projectId}/integrations/linkedin/select`);
       }
       break;
@@ -121,7 +121,8 @@ export async function GET(
         return new NextResponse('Meta credentials not configured', { status: 500 });
       }
 
-      const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/social/meta/callback`;
+      const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
+      const redirectUri = `${baseUrl}/api/auth/social/meta/callback`;
 
       const tokenResponse = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`);
 
@@ -136,7 +137,6 @@ export async function GET(
       
       const cookieStore = await cookies();
       cookieStore.set('meta_temp_token', accessToken, { secure: true, httpOnly: true });
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       return NextResponse.redirect(`${baseUrl}/dashboard/${projectId}/integrations/meta/select`);
     }
     default:
@@ -166,6 +166,6 @@ export async function GET(
   }
 
   // Redirect back to integrations page
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
   return NextResponse.redirect(`${baseUrl}/dashboard/${projectId}/integrations`);
 }
