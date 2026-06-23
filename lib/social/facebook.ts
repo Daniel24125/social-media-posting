@@ -2,7 +2,7 @@ export async function publishToFacebook(pageId: string, content: string, accessT
   const hasMedia = imageUrls && imageUrls.length > 0;
   const endpoint = hasMedia ? `/${pageId}/photos` : `/${pageId}/feed`;
   
-  const payload: any = {
+  const payload: Record<string, string> = {
     access_token: accessToken,
   };
 
