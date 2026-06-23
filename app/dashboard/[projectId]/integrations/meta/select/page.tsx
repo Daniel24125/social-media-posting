@@ -21,28 +21,38 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
     redirect(`/dashboard/${projectId}/integrations?error=session_expired`);
   }
 
-  // Fetch Facebook Pages and nested Instagram Business Accounts in a single query
-  const res = await fetch(
-    `https://graph.facebook.com/v19.0/me/accounts?access_token=${tempToken}&fields=id,name,access_token,instagram_business_account{id,username}`
-  );
+  // Fetch both personal accounts and business-assigned pages in parallel
+  const [accountsRes, assignedRes] = await Promise.all([
+    fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${tempToken}&fields=id,name,access_token,instagram_business_account{id,username}`),
+    fetch(`https://graph.facebook.com/v19.0/me/assigned_pages?access_token=${tempToken}&fields=id,name,access_token,instagram_business_account{id,username}`)
+  ]);
 
-  if (!res.ok) {
-    console.error('Failed to fetch Meta options:', await res.text());
-    redirect(`/dashboard/${projectId}/integrations?error=meta_api_failed`);
-  }
-
-  const json = await res.json();
+  const accountsJson = await accountsRes.json();
+  const assignedJson = await assignedRes.json();
 
   // --- TRUTH SERUM LOG ---
   console.log("================ RAW META API RESPONSE ================");
-  console.log(JSON.stringify(json, null, 2));
+  console.log("ACCOUNTS ENDPOINT:", JSON.stringify(accountsJson, null, 2));
+  console.log("ASSIGNED ENDPOINT:", JSON.stringify(assignedJson, null, 2));
   console.log("=======================================================");
 
-  if (json.error) {
-    console.error('Meta API Error Payload:', json.error);
+  // Handle fatal errors if both requests fail entirely
+  if (accountsJson.error && assignedJson.error) {
+    console.error('Meta API Errors:', { accounts: accountsJson.error, assigned: assignedJson.error });
+    redirect(`/dashboard/${projectId}/integrations?error=meta_api_failed`);
   }
 
-  const pagesData: MetaPageData[] = json.data || [];
+  // Merge the data arrays, filtering out any duplicate Page IDs
+  const allPagesData = [...(accountsJson.data || []), ...(assignedJson.data || [])];
+  const uniquePagesMap = new Map();
+  
+  allPagesData.forEach((page) => {
+    if (!uniquePagesMap.has(page.id)) {
+      uniquePagesMap.set(page.id, page);
+    }
+  });
+
+  const pagesData: MetaPageData[] = Array.from(uniquePagesMap.values());
 
   const facebookPages = pagesData.map(p => ({
     id: p.id,
