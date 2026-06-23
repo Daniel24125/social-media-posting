@@ -121,7 +121,8 @@ export async function GET(
         return new NextResponse('Meta credentials not configured', { status: 500 });
       }
 
-      const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
+      let baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
+      baseUrl = baseUrl.replace(/\/$/, ''); // Strip trailing slash if present
       const redirectUri = `${baseUrl}/api/auth/social/meta/callback`;
 
       const tokenResponse = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`);

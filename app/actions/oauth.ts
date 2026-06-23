@@ -2,7 +2,8 @@
 
 
 export async function getAuthorizeUrl(authPath: string, projectId: string) {
-  const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
+  let baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://s-media-posting.vercel.app' : 'http://localhost:3000');
+  baseUrl = baseUrl.replace(/\/$/, ''); // Strip trailing slash if present
   const redirectUri = `${baseUrl}/api/auth/social/${authPath}/callback`;
 
   switch (authPath) {
