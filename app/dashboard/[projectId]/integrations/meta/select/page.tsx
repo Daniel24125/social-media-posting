@@ -32,6 +32,16 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
   }
 
   const json = await res.json();
+
+  // --- TRUTH SERUM LOG ---
+  console.log("================ RAW META API RESPONSE ================");
+  console.log(JSON.stringify(json, null, 2));
+  console.log("=======================================================");
+
+  if (json.error) {
+    console.error('Meta API Error Payload:', json.error);
+  }
+
   const pagesData: MetaPageData[] = json.data || [];
 
   const facebookPages = pagesData.map(p => ({
