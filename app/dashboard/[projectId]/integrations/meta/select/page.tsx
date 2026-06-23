@@ -16,7 +16,7 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
   const { projectId } = await params;
   const cookieStore = await cookies();
   const tempToken = cookieStore.get('meta_temp_token')?.value;
-
+  console.log("MY TOKEN:", tempToken)
   if (!tempToken) {
     redirect(`/dashboard/${projectId}/integrations?error=session_expired`);
   }
@@ -45,7 +45,7 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
   // Merge the data arrays, filtering out any duplicate Page IDs
   const allPagesData = [...(accountsJson.data || []), ...(assignedJson.data || [])];
   const uniquePagesMap = new Map();
-  
+
   allPagesData.forEach((page) => {
     if (!uniquePagesMap.has(page.id)) {
       uniquePagesMap.set(page.id, page);
@@ -73,7 +73,7 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
     <div className="max-w-2xl mx-auto py-10 px-4">
       <h1 className="text-2xl font-bold mb-2">Link Meta Channels</h1>
       <p className="text-gray-500 mb-8">Select the Facebook Pages and Instagram Professional accounts you want to manage in this workspace.</p>
-      
+
       <SelectClient facebookPages={facebookPages} instagramAccounts={instagramAccounts} projectId={projectId} />
     </div>
   );
