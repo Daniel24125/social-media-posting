@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { publishToLinkedin } from '@/lib/social/linkedin';
+import { publishToFacebook } from '@/lib/social/facebook';
+import { publishToInstagram } from '@/lib/social/instagram';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +59,28 @@ export async function GET(request: Request) {
               account.profileId,
               post.content,
               post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : null
+            );
+          } else if (platformType === 'FACEBOOK') {
+            const account = accounts.find((a) => a.id === accountId);
+            if (!account || !account.accessToken || !account.profileId) {
+              throw new Error(`Facebook account not connected or missing token for platform ${platformType}`);
+            }
+            await publishToFacebook(
+              account.profileId,
+              post.content,
+              account.accessToken,
+              post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : undefined
+            );
+          } else if (platformType === 'INSTAGRAM') {
+            const account = accounts.find((a) => a.id === accountId);
+            if (!account || !account.accessToken || !account.profileId) {
+              throw new Error(`Instagram account not connected or missing token for platform ${platformType}`);
+            }
+            await publishToInstagram(
+              account.profileId,
+              post.content,
+              account.accessToken,
+              post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : undefined
             );
           }
         }

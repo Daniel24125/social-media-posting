@@ -16,7 +16,6 @@ export default async function MetaSelectPage({ params }: { params: Promise<{ pro
   const { projectId } = await params;
   const cookieStore = await cookies();
   const tempToken = cookieStore.get('meta_temp_token')?.value;
-  console.log("MY TOKEN:", tempToken)
   if (!tempToken) {
     redirect(`/dashboard/${projectId}/integrations?error=session_expired`);
   }

@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { publishToLinkedin } from '@/lib/social/linkedin';
 import { publishToFacebook } from '@/lib/social/facebook';
+import { publishToInstagram } from '@/lib/social/instagram';
+
 export async function createScheduledPost(projectId: string, formData: FormData) {
   const session = await auth0.getSession();
   if (!session || !session.user) {
@@ -89,10 +91,16 @@ export async function createScheduledPost(projectId: string, formData: FormData)
           await publishToLinkedin(account.accessToken, account.profileId, content, imageUrls && imageUrls.length > 0 ? imageUrls : null);
         } else if (platformType === 'FACEBOOK') {
           const account = accounts.find((a) => a.id === accountId);
-          if (!account || !account.profileId) {
-            throw new Error(`Facebook account not connected for platform ${platformType}`);
+          if (!account || !account.profileId || !account.accessToken) {
+            throw new Error(`Facebook account not connected or missing token for platform ${platformType}`);
           }
-          await publishToFacebook(account.profileId, content, projectId);
+          await publishToFacebook(account.profileId, content, account.accessToken, imageUrls && imageUrls.length > 0 ? imageUrls : undefined);
+        } else if (platformType === 'INSTAGRAM') {
+          const account = accounts.find((a) => a.id === accountId);
+          if (!account || !account.profileId || !account.accessToken) {
+            throw new Error(`Instagram account not connected or missing token for platform ${platformType}`);
+          }
+          await publishToInstagram(account.profileId, content, account.accessToken, imageUrls && imageUrls.length > 0 ? imageUrls : undefined);
         }
       }
 
