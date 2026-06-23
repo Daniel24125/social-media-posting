@@ -26,7 +26,16 @@ export async function getAuthorizeUrl(authPath: string, projectId: string) {
       const clientId = process.env.META_APP_ID;
       if (!clientId) return { error: 'Meta App ID not configured in your environment variables.' };
 
-      const scope = encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts');
+      const scopes = [
+        'instagram_basic',
+        'instagram_content_publish',
+        'pages_show_list',
+        'pages_read_engagement',
+        'pages_manage_posts',
+        'public_profile',
+        'business_management'
+      ].join(',');
+      const scope = encodeURIComponent(scopes);
       return { url: `https://www.facebook.com/v19.0/dialog/oauth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${projectId}&scope=${scope}` };
     }
     default:
